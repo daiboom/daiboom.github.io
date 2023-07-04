@@ -1,47 +1,49 @@
 'use client'
-
 import { Box, Heading } from '@chakra-ui/react'
 import { useEffect } from 'react'
 
-function MinCoinChange(coins: number[]) {
-  const cache: { [k: string]: any } = {}
-  // @ts-ignore
-  const _self = this
-  _self.makeChange = function (amount: number) {
-    if (!amount) {
-      return []
-    }
+// import { Box, Heading } from '@chakra-ui/react'
+// import { useEffect } from 'react'
 
-    if (cache[amount]) {
-      return cache[amount]
-    }
+// function MinCoinChange(coins: number[]) {
+//   const cache: { [k: string]: any } = {}
+//   // @ts-ignore
+//   const _self = this
+//   _self.makeChange = function (amount: number) {
+//     if (!amount) {
+//       return []
+//     }
 
-    let min: number[] = []
-    let newMin: number[] = []
-    let newAmount: number
+//     if (cache[amount]) {
+//       return cache[amount]
+//     }
 
-    for (let i = 0; i < coins.length; i++) {
-      const coin = coins[i]
-      newAmount = amount - coin
+//     let min: number[] = []
+//     let newMin: number[] = []
+//     let newAmount: number
 
-      if (newAmount >= 0) {
-        newMin = _self.makeChange(newAmount)
-      }
+//     for (let i = 0; i < coins.length; i++) {
+//       const coin = coins[i]
+//       newAmount = amount - coin
 
-      if (
-        newAmount >= 0 &&
-        (newMin.length < min.length - 1 ||
-          (!min.length && newMin.length) ||
-          !newAmount)
-      ) {
-        min = [coin].concat(newMin)
-        console.log(`newMin ${min} for ${amount}`)
-      }
-    }
+//       if (newAmount >= 0) {
+//         newMin = _self.makeChange(newAmount)
+//       }
 
-    return (cache[amount] = min)
-  }
-}
+//       if (
+//         newAmount >= 0 &&
+//         (newMin.length < min.length - 1 ||
+//           (!min.length && newMin.length) ||
+//           !newAmount)
+//       ) {
+//         min = [coin].concat(newMin)
+//         console.log(`newMin ${min} for ${amount}`)
+//       }
+//     }
+
+//     return (cache[amount] = min)
+//   }
+// }
 
 const MinCoinChangeFC = () => {
   useEffect(() => {

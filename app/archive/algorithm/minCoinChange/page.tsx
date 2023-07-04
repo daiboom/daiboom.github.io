@@ -4,10 +4,10 @@ import { Box, Heading } from '@chakra-ui/react'
 import { useEffect } from 'react'
 
 function MinCoinChange(coins: number[]) {
-  let cache: { [k: string]: any } = {}
-
-  this.makeChange = function (amount: number) {
-    let _self = this
+  const cache: { [k: string]: any } = {}
+  // @ts-ignore
+  const _self = this
+  _self.makeChange = function (amount: number) {
     if (!amount) {
       return []
     }
@@ -21,7 +21,7 @@ function MinCoinChange(coins: number[]) {
     let newAmount: number
 
     for (let i = 0; i < coins.length; i++) {
-      let coin = coins[i]
+      const coin = coins[i]
       newAmount = amount - coin
 
       if (newAmount >= 0) {
@@ -45,8 +45,8 @@ function MinCoinChange(coins: number[]) {
 
 const MinCoinChangeFC = () => {
   useEffect(() => {
-    const minCoinChange = new MinCoinChange([1, 5, 10, 25])
-    console.log(minCoinChange.makeChange(36))
+    // const minCoinChange = new MinCoinChange([1, 5, 10, 25])
+    // console.log(minCoinChange.makeChange(36))
   }, [])
 
   return (

@@ -3,7 +3,7 @@
 import Content from '@/app/_components/layout/Content'
 import Footer from '@/app/_components/layout/Footer'
 import Header from '@/app/_components/layout/Header'
-import SideBar from '@/app/_components/layout/SideBar'
+import Progress from '@/app/_components/layout/Progress'
 import SubHeader from '@/app/_components/layout/SubHeader'
 import TopBar from '@/app/_components/layout/TopBar'
 import { CacheProvider } from '@chakra-ui/next-js'
@@ -21,11 +21,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
           }}
         >
           <Box sx={{}}>
+            <Progress />
             <TopBar />
             <Header />
             <SubHeader />
             <Content>{children}</Content>
-            <SideBar />
+            {/* <SideBar /> */}
             <Footer />
           </Box>
         </Container>

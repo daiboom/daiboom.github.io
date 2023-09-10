@@ -5,5 +5,5 @@ interface ContentProps {
 }
 
 export default function Content({ children }: ContentProps) {
-  return <Box>{children}</Box>
+  return <Box sx={{ minH: '100vh' }}>{children}</Box>
 }

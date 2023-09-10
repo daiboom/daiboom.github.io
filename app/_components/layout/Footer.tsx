@@ -22,6 +22,7 @@ export default function Footer() {
           paddingBottom: '40px',
           maxWidth: '1080px',
           margin: '0 auto',
+          px: '24px',
         }}
       >
         <Flex

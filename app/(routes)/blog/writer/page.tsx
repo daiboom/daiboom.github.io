@@ -1,6 +1,5 @@
 'use client'
 
-import Editor from '@/app/_components/editor/Editor'
 import {
   Box,
   FormControl,
@@ -35,7 +34,7 @@ export default function Writer() {
         <Input type="email" />
       </FormControl>
       내용
-      <Editor ref={editorStateRef} />
+      {/*  <Editor ref={editorStateRef} /> */}
     </Box>
   )
 }

@@ -490,7 +490,15 @@ const skills: string[] = uniq(
 
 const SkillTag = ({ skill }: { skill: string }) => {
   return (
-    <Tag key={skill} sx={{ background: '#191919', color: '#fbfbfb' }}>
+    <Tag
+      key={skill}
+      sx={{
+        fontSize: '14px',
+        background: '#faf6ff',
+        color: '#6b16ee',
+        border: '1px solid rgba(0,0,0,0)',
+      }}
+    >
       {skill}
     </Tag>
   )
@@ -511,10 +519,10 @@ const Career: CareerFC = ({ career, index }) => {
   }
   return (
     <Box sx={{ mt: '25px', mb: '35px' }}>
-      <Flex sx={{ alignItems: 'center', mb: '15px', opacity: 0.7 }}>
-        <Tag
+      {/* <Flex sx={{ alignItems: 'center', mb: '15px', opacity: 0.7 }}> */}
+      {/* <Tag
           sx={{
-            bg: 'indianred',
+            bg: '#6b16ee',
             color: '#fff',
             rounded: 'full',
             aspectRatio: '1',
@@ -522,9 +530,13 @@ const Career: CareerFC = ({ career, index }) => {
           size="sm"
         >
           {index + 1}
-        </Tag>
-        <Divider sx={{ border: '1px solid indianred' }} />
-      </Flex>
+        </Tag> */}
+      {/* <Image src={'/assets/images/dotted_line.png'} /> */}
+      {/* <Text as={'span'} sx={{ color: '#6b16ee' }}>
+          {index + 1}
+        </Text> */}
+      {/* <Divider sx={{ borderBottom: '1px solid #6b16ee' }} /> */}
+      {/* </Flex> */}
       <Flex sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
         <Heading as="h3" size="md">
           {career.companyName}
@@ -552,7 +564,7 @@ const Career: CareerFC = ({ career, index }) => {
       </Heading>
       {career.projects.map((project, i) => {
         return (
-          <Box key={project.title} sx={{ mt: '15px', mb: '15px', ml: '15px' }}>
+          <Box key={project.title} sx={{ mt: '15px', mb: '15px' }}>
             {i > 0 ? <Divider my={'15px'} /> : null}
             <Flex sx={{ justifyContent: 'space-between' }}>
               <Flex sx={{ alignItems: 'center', ...styles.heading5 }}>
@@ -566,7 +578,7 @@ const Career: CareerFC = ({ career, index }) => {
             <Heading as="h5" size="sm" sx={{ ...styles.heading5 }}>
               작업내역
             </Heading>
-            <UnorderedList sx={{ marginInlineStart: '1.5rem' }}>
+            <UnorderedList sx={{ marginInlineStart: '0rem' }}>
               {project.worklist.map((work) => (
                 <ListItem key={work}>{work}</ListItem>
               ))}
@@ -590,8 +602,8 @@ const Career: CareerFC = ({ career, index }) => {
 const About = () => {
   const styles: Record<string, SystemStyleObject> = {
     heading2: {
-      mt: '5px',
-      mb: '5px',
+      mt: '35px',
+      mb: '15px',
       color: '#191919',
     },
     divider: {
@@ -599,79 +611,83 @@ const About = () => {
     },
   }
   return (
-    <Box>
-      <Heading as="h1" size="md" sx={styles.heading2}>
-        최대범. Choe DaeBeom
-      </Heading>
-      <Divider sx={styles.divider} />
-      <Text>
-        연락처: 010-9775-4920 <br />
-        이메일: chleoqja1760@gmail.com <br />
-      </Text>
-      <Divider sx={styles.divider} />
-      <Heading as="h2" size="md" sx={styles.heading2}>
-        핵심역량
-      </Heading>
-      <List>
-        <ListItem>
-          React, Redux, React-Router, Typescript, SCSS, HTTP, WebSocket에 대한
-        </ListItem>
-        <ListItem>
-          이해와 RESTful API, graphQL 사용하여 비동기 개발 CSS방법론(BEM), 코딩
-        </ListItem>
-        <ListItem>
-          컨벤션, Git, 등 표준에 가까운 협업중심의 업무스타일 서버를 이해하여
-        </ListItem>
-        <ListItem> 프론트엔드 개발이 원활함 섬세한 에러처리</ListItem>
-      </List>
-      <Divider sx={styles.divider} />
-      <Heading as="h2" size="md" sx={styles.heading2}>
-        보유기술
-      </Heading>
-      <Box>
-        <Flex sx={{ gap: '5px', flexWrap: 'wrap' }}>
-          {skills.map((skill) => (
-            <SkillTag key={skill} skill={skill} />
+    <Flex sx={{ maxWidth: '720px', margin: '0 auto' }}>
+      <Box sx={{ p: '36px 24px 56px' }}>
+        <Heading as="h1" size="md" sx={styles.heading2}>
+          최대범. Choe DaeBeom
+        </Heading>
+        {/* <Divider sx={styles.divider} /> */}
+        <Text>
+          연락처: 010-9775-4920 <br />
+          이메일: chleoqja1760@gmail.com <br />
+        </Text>
+        {/* <Divider sx={styles.divider} /> */}
+        <Heading as="h2" size="md" sx={styles.heading2}>
+          핵심역량 🧑‍🔬
+        </Heading>
+        <List>
+          <ListItem>
+            React, Redux, React-Router, Typescript, SCSS, HTTP, WebSocket에 대한
+          </ListItem>
+          <ListItem>
+            이해와 RESTful API, graphQL 사용하여 비동기 개발 CSS방법론(BEM),
+            코딩
+          </ListItem>
+          <ListItem>
+            컨벤션, Git, 등 표준에 가까운 협업중심의 업무스타일 서버를 이해하여
+          </ListItem>
+          <ListItem> 프론트엔드 개발이 원활함 섬세한 에러처리</ListItem>
+        </List>
+        {/* <Divider sx={styles.divider} /> */}
+        <Heading as="h2" size="md" sx={styles.heading2}>
+          🧑‍💻 보유기술
+        </Heading>
+        <Box>
+          <Flex sx={{ gap: '5px', flexWrap: 'wrap' }}>
+            {skills.map((skill) => (
+              <SkillTag key={skill} skill={skill} />
+            ))}
+          </Flex>
+        </Box>
+        {/* <Divider sx={styles.divider} /> */}
+        <Heading as="h2" size="md" sx={styles.heading2}>
+          🎒 학력사항
+        </Heading>
+        <Box>
+          <Text>
+            방송통신대학교/첨단공학과/인공지능학과/2021. 03 ~ 2024.02(졸업예정)
+          </Text>
+          <Text>
+            광주송원대학/컴퓨터공학과/게임영상콘텐츠학과/2011. 03 ~
+            2015.02(졸업)
+          </Text>
+        </Box>
+        {/* <Divider sx={styles.divider} /> */}
+        <Heading as="h2" size="md" sx={styles.heading2}>
+          🪖 병역사항
+        </Heading>
+        <Box>
+          <Text>해병대 병장 만기전역/2011.04.04 ~ 2013.01.03</Text>
+        </Box>
+        {/* <Divider sx={styles.divider} /> */}
+        <Heading as="h2" size="md" sx={styles.heading2}>
+          🌏 자격사항
+        </Heading>
+        <Box>
+          <Text>정보처리기사 / 한국산업인력공단 / 2019. 11. 22</Text>
+          <Text>운전면허증(1종 보통) / 한국산업인력공단 / 2013. 03. 22</Text>
+        </Box>
+        {/* <Divider sx={styles.divider} /> */}
+        <Heading as="h2" size="md" sx={styles.heading2}>
+          📑 경력사항
+        </Heading>
+        <Box>
+          {careerDatas.map((career, i) => (
+            <Career key={career.companyName} career={career} index={i} />
           ))}
-        </Flex>
+        </Box>
       </Box>
-      <Divider sx={styles.divider} />
-      <Heading as="h2" size="md" sx={styles.heading2}>
-        학력사항
-      </Heading>
-      <Box>
-        <Text>
-          방송통신대학교/첨단공학과/인공지능학과/2021. 03 ~ 2024.02(졸업예정)
-        </Text>
-        <Text>
-          광주송원대학/컴퓨터공학과/게임영상콘텐츠학과/2011. 03 ~ 2015.02(졸업)
-        </Text>
-      </Box>
-      <Divider sx={styles.divider} />
-      <Heading as="h2" size="md" sx={styles.heading2}>
-        병역사항
-      </Heading>
-      <Box>
-        <Text>해병대 병장 만기전역/2011.04.04 ~ 2013.01.03</Text>
-      </Box>
-      <Divider sx={styles.divider} />
-      <Heading as="h2" size="md" sx={styles.heading2}>
-        자격사항
-      </Heading>
-      <Box>
-        <Text>정보처리기사 / 한국산업인력공단 / 2019. 11. 22</Text>
-        <Text>운전면허증(1종 보통) / 한국산업인력공단 / 2013. 03. 22</Text>
-      </Box>
-      <Divider sx={styles.divider} />
-      <Heading as="h2" size="md" sx={styles.heading2}>
-        경력내역
-      </Heading>
-      <Box>
-        {careerDatas.map((career, i) => (
-          <Career key={career.companyName} career={career} index={i} />
-        ))}
-      </Box>
-    </Box>
+    </Flex>
   )
 }
 

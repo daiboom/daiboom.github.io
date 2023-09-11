@@ -3,7 +3,15 @@
 import { Box, Flex, Heading, Image, Spacer } from '@chakra-ui/react'
 import Link from 'next/link'
 
-export default function Category() {
+export async function generateStaticParams() {
+  return ['javascript'].map((post) => ({
+    slug: post,
+  }))
+}
+
+export default function Category({ params }) {
+  const { slug } = params
+
   return (
     <Box sx={{ maxW: '720px', pt: '32px', paddingX: '24px', margin: '0 auto' }}>
       <Box sx={{ pb: '24px' }}>
@@ -22,7 +30,7 @@ export default function Category() {
               color: '#212121',
             }}
           >
-            통계
+            통계{slug}
           </Heading>
         </Box>
         <Box

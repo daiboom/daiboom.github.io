@@ -18,9 +18,9 @@ export async function generateStaticParams() {
   }))
 }
 
-export default function Category({ params }: any) {
+export default async function Category({ params }: any) {
   const { cid } = params
-  console.log('params ===>', cid)
+  console.log('params ===>', params)
   return (
     <Box sx={{ maxW: '720px', pt: '32px', paddingX: '24px', margin: '0 auto' }}>
       <Box sx={{ pb: '24px' }}>

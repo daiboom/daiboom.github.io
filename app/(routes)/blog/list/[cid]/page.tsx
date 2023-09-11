@@ -5,7 +5,7 @@ import Link from 'next/link'
 
 export default function Category() {
   return (
-    <Box sx={{ pt: '32px', paddingX: '24px', margin: '0 auto' }}>
+    <Box sx={{ maxW: '720px', pt: '32px', paddingX: '24px', margin: '0 auto' }}>
       <Box sx={{ pb: '24px' }}>
         <Box
           sx={{
@@ -70,9 +70,7 @@ export default function Category() {
                   }}
                   href={'/'}
                 >
-                  브랜드 정립 단계에서 꼭 던져야 하는 질문들브랜드 정립 단계에서
-                  꼭 던져야 하는 질문들 브랜드 정립 단계에서 꼭 던져야 하는
-                  질문들브랜드 정립 단계에서 꼭 던져야 하는 질문들
+                  브랜드 정립 단계에서 꼭 던져야 하는 질문들
                 </Link>
                 <Flex
                   sx={{

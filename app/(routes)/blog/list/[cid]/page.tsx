@@ -9,7 +9,7 @@ export async function generateStaticParams() {
   }))
 }
 
-export default function Category({ params }) {
+export default function Category({ params }: any) {
   const { slug } = params
 
   return (

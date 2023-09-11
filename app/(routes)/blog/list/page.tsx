@@ -5,7 +5,9 @@ import Link from 'next/link'
 
 export default function Category() {
   return (
-    <Box sx={{ pt: '32px', paddingX: '24px', margin: '0 auto' }}>
+    <Box
+      sx={{ maxW: '1080px', pt: '32px', paddingX: '24px', margin: '0 auto' }}
+    >
       <Box sx={{ pb: '24px' }}>
         <Box
           sx={{

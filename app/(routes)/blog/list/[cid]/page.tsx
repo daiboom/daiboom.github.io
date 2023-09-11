@@ -4,14 +4,14 @@ import { Box, Flex, Heading, Image, Spacer } from '@chakra-ui/react'
 import Link from 'next/link'
 
 export async function generateStaticParams() {
-  return ['javascript'].map((post) => ({
-    slug: post,
+  return ['javascript'].map((slug) => ({
+    slug,
   }))
 }
 
 export default function Category({ params }: any) {
   const { slug } = params
-
+  console.log('params ===>', params)
   return (
     <Box sx={{ maxW: '720px', pt: '32px', paddingX: '24px', margin: '0 auto' }}>
       <Box sx={{ pb: '24px' }}>

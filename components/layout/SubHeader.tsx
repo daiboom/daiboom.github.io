@@ -1,6 +1,4 @@
-
-
-import { Box, Divider, Flex } from '@chakra-ui/react'
+import { Box, Flex } from '@chakra-ui/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -43,7 +41,7 @@ export default function SubHeader() {
               },
             }}
           >
-            <Box sx={{ fontSize: '14px' }}>
+            {/* <Box sx={{ fontSize: '14px' }}>
               <Link href={'/blog/list/statistics'}>
                 <Box sx={{ py: '16px' }}>통계</Box>
               </Link>
@@ -91,7 +89,7 @@ export default function SubHeader() {
               <Link href={'/blog/list/golang'}>
                 <Box sx={{ py: '16px' }}>Go</Box>
               </Link>
-            </Box>
+            </Box> */}
             <Box sx={{ fontSize: '14px' }}>
               <Link href={'/archive'}>
                 <Box sx={{ py: '16px' }}>저장소</Box>

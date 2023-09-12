@@ -1,11 +1,7 @@
+import { Box } from '@chakra-ui/react'
 
-
-import {Box} from '@chakra-ui/react'
-
- const CodePen = () => {
-  return (
-   <Box>CodePen</Box>
-  )
+const CodePen = () => {
+  return <Box>CodePen</Box>
 }
 
 export default CodePen

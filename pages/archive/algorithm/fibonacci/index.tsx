@@ -1,14 +1,14 @@
 import { Box, Heading } from '@chakra-ui/react'
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 
 const Fibonacci = () => {
-  const reculsiveFibonacci = (num: number): number => {
+  const reculsiveFibonacci = useCallback((num: number): number => {
     if (num === 1 || num === 2) {
       return 1
     }
 
     return reculsiveFibonacci(num - 1) + reculsiveFibonacci(num - 2)
-  }
+  }, [])
 
   const nomalFibonacci = (num: number) => {
     let n1 = 1
@@ -31,7 +31,7 @@ const Fibonacci = () => {
     console.time('nomalFibonacci')
     console.log('nomalFibonacci: ', nomalFibonacci(1))
     console.timeEnd('nomalFibonacci')
-  }, [])
+  }, [reculsiveFibonacci])
 
   return (
     <Box>

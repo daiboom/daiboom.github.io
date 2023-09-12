@@ -1,11 +1,7 @@
+import { Box } from '@chakra-ui/react'
 
-
-import {Box} from '@chakra-ui/react'
-
- const WebSocket = () => {
-  return (
-   <Box>WebSocket</Box>
-  )
+const WebSocket = () => {
+  return <Box>WebSocket</Box>
 }
 
 export default WebSocket

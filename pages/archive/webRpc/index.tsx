@@ -1,11 +1,7 @@
+import { Box } from '@chakra-ui/react'
 
-
-import {Box} from '@chakra-ui/react'
-
- const WebRpc = () => {
-  return (
-   <Box>WebRpc</Box>
-  )
+const WebRpc = () => {
+  return <Box>WebRpc</Box>
 }
 
 export default WebRpc

@@ -1,5 +1,3 @@
-
-
 import {
   Box,
   Divider,
@@ -485,7 +483,7 @@ const skills: string[] = uniq(
       return [...prevP, ...currP.skills]
     }, [])
     return [...prev, ...s]
-  }, [])
+  }, []),
 )
 
 const SkillTag = ({ skill }: { skill: string }) => {

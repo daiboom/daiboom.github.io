@@ -26,7 +26,6 @@
 //     rgb(var(--background-start-rgb));
 // }
 
-
 html,
 body {
   color: #212121;
@@ -37,7 +36,11 @@ body {
 body {
   margin: 0;
   // background: #eee;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, ".SFNSText-Regular",
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    '.SFNSText-Regular',
     sans-serif;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
@@ -45,8 +48,6 @@ body {
   font-size: 16px;
   letter-spacing: -0.49px;
   line-height: 1.4;
-  
-  
 }
 
 .other h2 {
@@ -86,10 +87,10 @@ h1 {
 }
 
 .editor-container {
-  border:1px solid #e5e7eb;
-  
+  border: 1px solid #e5e7eb;
+
   border-radius: 2px;
-  
+
   color: #000;
   position: relative;
   line-height: 20px;
@@ -565,7 +566,9 @@ i.chevron-down {
   z-index: 5;
   display: block;
   position: absolute;
-  box-shadow: 0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 2px 4px 0 rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 12px 28px 0 rgba(0, 0, 0, 0.2),
+    0 2px 4px 0 rgba(0, 0, 0, 0.1),
     inset 0 0 0 1px rgba(255, 255, 255, 0.5);
   border-radius: 8px;
   min-width: 100px;
@@ -792,21 +795,25 @@ i.justify-align {
   background-image: url(../_assets/images/icons/justify.svg);
 }
 
-// 
+//
 
-.news-detail .next-news-contents h3, .ck-content h3, .tutorial-wrapper h3 {
-    font-size: 24px;
-    line-height: 36px;
-    margin-top: 5px;
-    margin-bottom: 24px;
-    color: #212121;
+.news-detail .next-news-contents h3,
+.ck-content h3,
+.tutorial-wrapper h3 {
+  font-size: 24px;
+  line-height: 36px;
+  margin-top: 5px;
+  margin-bottom: 24px;
+  color: #212121;
 }
 
-.news-detail .next-news-contents h4, .ck-content h4, .tutorial-wrapper h4 {
-    font-size: 18px;
-    line-height: 32px;
-    margin-top: 2px;
-    color: #212121;
+.news-detail .next-news-contents h4,
+.ck-content h4,
+.tutorial-wrapper h4 {
+  font-size: 18px;
+  line-height: 32px;
+  margin-top: 2px;
+  color: #212121;
 }
 
 p {
@@ -820,7 +827,7 @@ ul {
   padding-inline-start: 0;
   list-style-type: none !important;
   counter-set: inst;
-  
+
   li {
     font-size: 16px;
     line-height: 32px;
@@ -830,7 +837,7 @@ ul {
     color: #313131;
 
     &::before {
-      content: "•";
+      content: '•';
       vertical-align: top;
       display: inline-block;
       width: 16px;
@@ -841,7 +848,3 @@ ul {
     }
   }
 }
-
-    
-
- 

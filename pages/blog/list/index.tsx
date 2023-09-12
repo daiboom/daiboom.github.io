@@ -1,5 +1,3 @@
-
-
 import { Box, Flex, Heading, Image, Spacer } from '@chakra-ui/react'
 import Link from 'next/link'
 

@@ -1,5 +1,3 @@
-
-
 import { Flex, SystemStyleObject } from '@chakra-ui/react'
 
 const About = () => {

@@ -80,18 +80,18 @@ export default function BasicFunction() {
                 type={'number'}
                 sx={{ width: '100px' }}
                 size={'xs'}
-                defaultValue={item.order}
-                onChange={(event) => {
+                value={item.order}
+                onKeyDown={(event) => {
                   if (
-                    !event.target.value ||
-                    parseInt(event.target.value) === item.order ||
-                    parseInt(event.target.value) > state.length ||
-                    parseInt(event.target.value) <= 0
+                    !event.key ||
+                    parseInt(event.key) === item.order ||
+                    parseInt(event.key) > state.length ||
+                    parseInt(event.key) <= 0
                   ) {
                     return
                   }
 
-                  const value = parseInt(event.target.value)
+                  const value = parseInt(event.key)
                   let newState = [...state]
 
                   const current = newState.slice(index, index + 1)

@@ -35,7 +35,50 @@ interface CareerData {
   projects: Project[]
 }
 
-const careerDatas: CareerData[] = [
+const careerList: CareerData[] = [
+  {
+    companyName: '자이온아이티에스',
+    role: '프론트엔드 개발자',
+    jobType: '정규직',
+    years: 2,
+    position: '선임',
+    responsibilty: '팀원',
+    department: 'DX사업부/R&D',
+    description: '보안솔루션 포탈 개발',
+    startDate: '24. 04',
+    endDate: '재직중',
+    projects: [
+      {
+        title: 'XFactor-web',
+        description: 'XFactor 보안솔루션 포탈입니다.',
+        worklist: [
+          '회원 및 게시물, 리워드 관리 기능 등 서비스에 필요한 관리자 화면 개발',
+        ],
+        startDate: '24. 04',
+        endDate: '진행중',
+        skills: ['RESTful API', 'Docker', 'ESLint', 'Prettier', 'Typescript'],
+      },
+      {
+        title: 'core-ui',
+        description: '프레임워크',
+        worklist: [
+          '앱내 게시판 개발',
+          '이벤트 상세페이지 및 이벤트 신청서 개발',
+          '매거진 상세페이지 개발',
+        ],
+        startDate: '24. 6',
+        endDate: '24. 9',
+        skills: [
+          'vite',
+          'shadcn-ui',
+          'tailwindcss',
+          'ESLint',
+          'Prettier',
+          'Typescript',
+        ],
+      },
+    ],
+  },
   {
     companyName: '어바웃피싱',
     role: '프론트엔드 개발자',
@@ -46,7 +89,7 @@ const careerDatas: CareerData[] = [
     department: '개발부문',
     description: '낚시 커뮤니티 앱',
     startDate: '22. 06',
-    endDate: '재직중',
+    endDate: '24.01',
     projects: [
       {
         title: '백오피스',
@@ -65,7 +108,7 @@ const careerDatas: CareerData[] = [
           'ESLint',
           'Prettier',
           'PropTypes',
-          'Typscript',
+          'Typescript',
         ],
       },
       {
@@ -86,7 +129,7 @@ const careerDatas: CareerData[] = [
           'Docker',
           'ESLint',
           'Prettier',
-          'Typscript',
+          'Typescript',
         ],
       },
     ],
@@ -478,12 +521,12 @@ const uniq = (strings: string[]) => {
 }
 
 const skills: string[] = uniq(
-  careerDatas.reduce((prev: string[], curr: CareerData) => {
+  careerList.reduce((prev: string[], curr: CareerData) => {
     const s: string[] = curr.projects.reduce((prevP: string[], currP) => {
       return [...prevP, ...currP.skills]
     }, [])
     return [...prev, ...s]
-  }, []),
+  }, [])
 )
 
 const SkillTag = ({ skill }: { skill: string }) => {
@@ -680,7 +723,7 @@ const About = () => {
           📑 경력사항
         </Heading>
         <Box>
-          {careerDatas.map((career, i) => (
+          {careerList.map((career, i) => (
             <Career key={career.companyName} career={career} index={i} />
           ))}
         </Box>

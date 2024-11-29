@@ -6,7 +6,7 @@ import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { useRef, useState } from 'react'
 import * as THREE from 'three'
 
-export function Sphere(props: ThreeElements['mesh']) {
+function Sphere(props: ThreeElements['mesh']) {
   const ref = useRef<THREE.Mesh>(null!)
   const [hovered, hover] = useState(false)
   const [clicked, click] = useState(false)

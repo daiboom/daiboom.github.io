@@ -1,10 +1,43 @@
 'use client'
 
-import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
+import { OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'
 import { Canvas, Euler, ThreeElements } from '@react-three/fiber'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
-import { useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
+import { DRACOLoader } from 'three/examples/jsm/Addons.js'
+
+function Model() {
+  const gltf = useGLTF(
+    '/assets/vallee_de_nevache_france/scene.gltf',
+    true,
+    undefined,
+    (loader) => {
+      const dracoLoader = new DRACOLoader()
+      dracoLoader.setDecoderPath(
+        'https://www.gstatic.com/draco/versioned/decoders/1.5.6/'
+      )
+      loader.setDRACOLoader(dracoLoader)
+    }
+  )
+
+  useEffect(() => {
+    if (gltf.scene) {
+      gltf.scene.traverse((child) => {
+        if (child.isMesh) {
+          // 기존 재질 유지하면서 속성만 수정
+          child.castShadow = true
+          child.receiveShadow = true
+        }
+      })
+    }
+  }, [gltf])
+
+  return <primitive object={gltf.scene} scale={0.002} position={[0, -10, 0]} />
+}
+
+// 프리로드 경로도 수정
+useGLTF.preload('/assets/vallee_de_nevache_france/scene.gltf')
 
 function Sphere(props: ThreeElements['mesh']) {
   const ref = useRef<THREE.Mesh>(null!)
@@ -102,20 +135,35 @@ function Torus({
 
 export default function Page() {
   console.log('process.env', process.env.NODE_ENV)
-
+  // const fbx = useFBX('/assets/Mount_Fuji.fbx')
+  // console.log(fbx)
+  // const fbx = useLoader()
   const torus2 = {
     scale: 1.2,
   }
 
   return (
     <div className="w-screen h-screen">
-      <Canvas fallback={<div>Sorry no WebGL supported!</div>}>
+      <Canvas shadows fallback={<div>Sorry no WebGL supported!</div>}>
         <color attach="background" args={['black']} />
-        <PerspectiveCamera makeDefault position={[45, 45, 45]} zoom={5} />
+
+        <PerspectiveCamera makeDefault position={[45, 45, 45]} zoom={3} />
         <OrbitControls />
 
-        <group scale={10}>
-          <ambientLight intensity={Math.PI / 2} />
+        <Suspense fallback={null}>
+          <Model />
+        </Suspense>
+
+        <ambientLight intensity={Math.PI / 2} />
+        <directionalLight
+          position={[5, 5, 5]}
+          intensity={1}
+          castShadow
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
+        />
+        <pointLight position={[-5, -5, -5]} intensity={0.5} />
+        <group scale={1}>
           <spotLight
             position={[10, 10, 10]}
             angle={0.15}
@@ -135,6 +183,7 @@ export default function Page() {
             color="#ff3366"
             glowColor="#ff00ff"
           />
+
           <Torus
             scale={torus2.scale}
             rotation={[-Math.PI / 3, 0, 0]}
@@ -142,12 +191,13 @@ export default function Page() {
             glowColor="#00ffaa"
           />
         </group>
-        {/* {process.env.NODE_ENV === 'development' ? (
+
+        {process.env.NODE_ENV === 'development' ? (
           <>
             <gridHelper args={[10, 10]} />
             <axesHelper args={[8]} />
           </>
-        ) : null} */}
+        ) : null}
         <EffectComposer>
           <Bloom
             intensity={2.0}

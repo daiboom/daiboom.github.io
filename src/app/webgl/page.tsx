@@ -61,6 +61,11 @@ export default function Page() {
             title="2D 서클들"
             description="하나의 궤도에 여러 서클 만들기"
           />
+          <ProjectCard
+            href="/webgl/star-topology"
+            title="성형 토폴로지"
+            description="성형 토폴로지 만들기"
+          />
         </div>
       </div>
     </main>

@@ -2,32 +2,55 @@
 
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import { Canvas, useFrame } from '@react-three/fiber'
+import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { useRef, useState } from 'react'
 import * as THREE from 'three'
 
-function DiamondCubes() {
-  const numberOfDiamonds = 10
-  const radius = 2
-  const diamonds = []
+function ArcSegments() {
+  const numberOfSegments = 10
+  const segments = []
+  const outerRadius = 2
+  const innerRadius = 1.1 // 이 값을 조절하여 안쪽 호의 크기 변경
+  const gap = 0.1
 
-  for (let i = 0; i < numberOfDiamonds; i++) {
-    const angle = (i * 2 * Math.PI) / numberOfDiamonds
-    const x = Math.cos(angle) * radius
-    const z = Math.sin(angle) * radius
+  for (let i = 0; i < numberOfSegments; i++) {
+    const startAngle = (i * 2 * Math.PI) / numberOfSegments + gap / 2
+    const endAngle = ((i + 1) * 2 * Math.PI) / numberOfSegments - gap / 2
 
-    diamonds.push(
-      <mesh
-        key={i}
-        position={[x, 0, z]}
-        rotation={[0, -angle + Math.PI / 2, 0]}
-      >
-        <boxGeometry args={[1, 0.5, 1]} />
+    const shape = new THREE.Shape()
+    // 외부 호
+    shape.moveTo(
+      Math.cos(startAngle) * innerRadius,
+      Math.sin(startAngle) * innerRadius
+    )
+    shape.lineTo(
+      Math.cos(startAngle) * outerRadius,
+      Math.sin(startAngle) * outerRadius
+    )
+    shape.absarc(0, 0, outerRadius, startAngle, endAngle, false)
+    shape.lineTo(
+      Math.cos(endAngle) * innerRadius,
+      Math.sin(endAngle) * innerRadius
+    )
+    shape.absarc(0, 0, innerRadius, endAngle, startAngle, true)
+
+    segments.push(
+      <mesh key={i} position={[0, 0, 0]}>
+        <extrudeGeometry
+          args={[
+            shape,
+            {
+              depth: 0.5,
+              bevelEnabled: false,
+            },
+          ]}
+        />
         <meshBasicMaterial color="white" side={THREE.DoubleSide} />
       </mesh>
     )
   }
 
-  return <group>{diamonds}</group>
+  return <group rotation={[Math.PI / 2, 0, 0]}>{segments}</group>
 }
 
 function Roulette() {
@@ -75,7 +98,7 @@ function Roulette() {
           <cylinderGeometry args={[1, 1, 0.5, 32]} />
           <meshStandardMaterial color="red" />
         </mesh>
-        <DiamondCubes />
+        <ArcSegments />
       </group>
     </group>
   )
@@ -99,7 +122,7 @@ export default function Page() {
             <axesHelper args={[8]} />
           </>
         ) : null}
-        {/* <EffectComposer>
+        <EffectComposer>
           <Bloom
             intensity={2.0}
             luminanceThreshold={0.2}
@@ -107,7 +130,7 @@ export default function Page() {
             mipmapBlur
             radius={0.8}
           />
-        </EffectComposer> */}
+        </EffectComposer>
       </Canvas>
     </div>
   )

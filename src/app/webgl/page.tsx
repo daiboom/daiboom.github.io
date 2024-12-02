@@ -72,7 +72,15 @@ export default function Page() {
   )
 }
 
-function ProjectCard({ href, title, description }) {
+function ProjectCard({
+  href,
+  title,
+  description,
+}: {
+  href: string
+  title: string
+  description: string
+}) {
   return (
     <Link
       href={href}

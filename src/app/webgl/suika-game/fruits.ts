@@ -1,3 +1,7 @@
+export interface CustomBody extends Matter.Body {
+  index: number
+}
+
 export interface Fruit {
   name: string
   radius: number

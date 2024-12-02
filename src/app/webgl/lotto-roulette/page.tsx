@@ -5,8 +5,11 @@ import { Canvas } from '@react-three/fiber'
 import { useState } from 'react'
 
 function Roulette() {
-  const [isSpinning, setIsSpinning] = useState(false)
-  const [prizeNumber, setPrizeNumber] = useState(0)
+  const [
+    isSpinning,
+    // setIsSpinning
+  ] = useState(false)
+  // const [prizeNumber, setPrizeNumber] = useState(0)
 
   return (
     <group>

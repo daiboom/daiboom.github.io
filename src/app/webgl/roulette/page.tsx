@@ -54,7 +54,7 @@ function ArcSegments() {
 }
 
 function Roulette() {
-  const groupRef = useRef()
+  const groupRef = useRef<THREE.Group>(null!)
   const [isSpinning, setIsSpinning] = useState(false)
   const [rotationSpeed, setRotationSpeed] = useState(0)
   const [targetRotation, setTargetRotation] = useState(0)

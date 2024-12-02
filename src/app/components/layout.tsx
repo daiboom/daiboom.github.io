@@ -1,11 +1,9 @@
 import { headers } from 'next/headers'
 import Link from 'next/link'
 
-export function DefaultLayout({ children }: { children: React.ReactNode }) {
+export default function Layout({ children }: { children: React.ReactNode }) {
   const headersList = headers()
   const pathname = headersList.get('x-pathname') || ''
-
-  console.log(pathname.startsWith('/webgl'), JSON.stringify(headersList))
 
   return (
     <section className="min-h-screen bg-white">

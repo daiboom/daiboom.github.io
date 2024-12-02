@@ -2,22 +2,22 @@
 
 import { useEffect } from 'react'
 
-interface Data {
-  label: string
-  value: string | number
-}
+// interface Data {
+//   label: string
+//   value: string | number
+// }
 
-interface DataCircle extends Data, Circle {
-  x: number
-  y: number
-  id: string
-  index: number
-}
+// interface DataCircle extends Data, Circle {
+//   x: number
+//   y: number
+//   id: string
+//   index: number
+// }
 
-interface Circle {
-  x: number
-  y: number
-}
+// interface Circle {
+//   x: number
+//   y: number
+// }
 
 interface Ellipse {
   cx: number
@@ -202,6 +202,10 @@ class ThreeCircles {
         rx * Math.cos(angle) * Math.sin(rotationInRadians) +
         ry * Math.sin(angle) * Math.cos(rotationInRadians)
 
+      if (!this.context) {
+        return
+      }
+
       // 각도 위치에 텍스트 그리기
       this.context.font = '14px Arial'
       this.context.fillStyle = 'blue'
@@ -229,7 +233,7 @@ class ThreeCircles {
     if (!this.isDragging || !this.lastMousePosition) return
 
     const dx = event.clientX - this.lastMousePosition.x // 마우스 이동 거리 (x축)
-    const dy = event.clientY - this.lastMousePosition.y // 마우스 이동 거리 (y축)
+    // const dy = event.clientY - this.lastMousePosition.y // 마우스 이동 거리 (y축)
 
     // x축 드래그 시 각도를 변경하여 원을 움직임
     this.angles = this.angles.map((angle) => angle + dx * 0.005) // 작은 변화량으로 각도 조정

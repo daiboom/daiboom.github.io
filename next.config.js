@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: false,
+  output: 'export',
+  reactStrictMode: true,
   webpack: (config) => {
     config.module.rules.push({
       test: /\.(fbx|glb|gltf)$/,

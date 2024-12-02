@@ -1,11 +1,10 @@
-export const dynamic = 'force-dynamic'
+'use client'
 
-import { headers } from 'next/headers'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const headersList = headers()
-  const pathname = headersList.get('x-pathname') || ''
+  const pathname = usePathname()
 
   return (
     <section className="min-h-screen bg-white">

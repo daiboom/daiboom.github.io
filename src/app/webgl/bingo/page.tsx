@@ -1,3 +1,3 @@
-export default function Page() {
-  return <div>page</div>
+export default function BingoPage() {
+  return <div>bingo</div>
 }

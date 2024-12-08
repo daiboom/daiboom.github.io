@@ -1,13 +1,68 @@
-import Link from 'next/link'
+'use client'
 
-export const metadata = {
-  title: {
-    default: 'WebGL 갤러리',
-    template: '%S | 사이트명',
-  },
-}
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+
+const ITEMS_PER_PAGE = 6
 
 export default function Page() {
+  const searchParams = useSearchParams()
+  const currentPage = Number(searchParams.get('webgl-page')) || 1
+
+  const projects = [
+    {
+      href: '/webgl/roulette',
+      title: '3D 룰렛',
+      description: '인터랙티브한 3D 룰렛 시스템',
+    },
+    {
+      href: '/webgl/pheonix',
+      title: '불사조',
+      description: '화려한 파티클 효과를 활용한 불사조 애니메이션',
+    },
+    {
+      href: '/webgl/music-sphere',
+      title: '음악상자',
+      description: '3D 공간에서 음악과 시각적 요소를 결합한 인터랙티브 작품',
+    },
+    {
+      href: '/webgl/bingo',
+      title: '3D 빙고',
+      description: 'WebGL로 구현한 3D 빙고 게임',
+    },
+    {
+      href: '/webgl/solar-system',
+      title: '태양계',
+      description: '실제 태양계의 크기와 움직임을 시뮬레이션한 작품',
+    },
+    {
+      href: '/webgl/suika-game',
+      title: '수박 만들기',
+      description: '물리 엔진을 활용한 수박 게임 모작',
+    },
+    {
+      href: '/webgl/explosion',
+      title: '3D 빅뱅 애니메이션',
+      description: '빅뱅 애니메이션 만들기',
+    },
+    {
+      href: '/webgl/circles',
+      title: '2D 서클들',
+      description: '하나의 궤도에 여러 서클 만들기',
+    },
+    {
+      href: '/webgl/star-topology',
+      title: '성형 토폴로지',
+      description: '성형 토폴로지 만들기',
+    },
+  ]
+
+  const totalPages = Math.ceil(projects.length / ITEMS_PER_PAGE)
+  const currentProjects = projects.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  )
+
   return (
     <main className="min-h-screen bg-gradient-to-b text-black p-8">
       <div className="max-w-6xl mx-auto">
@@ -20,55 +75,59 @@ export default function Page() {
           구현되었습니다.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
-          <ProjectCard
-            href="/webgl/roulette"
-            title="3D 룰렛"
-            description="인터랙티브한 3D 룰렛 시스템"
-          />
-          <ProjectCard
-            href="/webgl/pheonix"
-            title="불사조"
-            description="화려한 파티클 효과를 활용한 불사조 애니메이션"
-          />
-          <ProjectCard
-            href="/webgl/music-sphere"
-            title="음악상자"
-            description="3D 공간에서 음악과 시각적 요소를 결합한 인터랙티브 작품"
-          />
-          <ProjectCard
-            href="/webgl/bingo"
-            title="3D 빙고"
-            description="WebGL로 구현한 3D 빙고 게임"
-          />
-          <ProjectCard
-            href="/webgl/solar-system"
-            title="태양계"
-            description="실제 태양계의 크기와 움직임을 시뮬레이션한 작품"
-          />
-          <ProjectCard
-            href="/webgl/suika-game"
-            title="수박 만들기"
-            description="물리 엔진을 활용한 수박 게임 모작"
-          />
-          <ProjectCard
-            href="/webgl/explosion"
-            title="3D 빅뱅 애니메이션"
-            description="빅뱅 애니메이션 만들기"
-          />
-          <ProjectCard
-            href="/webgl/circles"
-            title="2D 서클들"
-            description="하나의 궤도에 여러 서클 만들기"
-          />
-          <ProjectCard
-            href="/webgl/star-topology"
-            title="성형 토폴로지"
-            description="성형 토폴로지 만들기"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1 mb-8">
+          {currentProjects.map((project, index) => (
+            <ProjectCard key={index} {...project} />
+          ))}
         </div>
+
+        <Pagination currentPage={currentPage} totalPages={totalPages} />
       </div>
     </main>
+  )
+}
+
+function Pagination({
+  currentPage,
+  totalPages,
+}: {
+  currentPage: number
+  totalPages: number
+}) {
+  return (
+    <div className="flex justify-center gap-2">
+      <Link
+        href={`?webgl-page=${Math.max(1, currentPage - 1)}`}
+        className={`px-4 py-2 bg-black text-white rounded-lg ${
+          currentPage === 1 ? 'opacity-50 pointer-events-none' : ''
+        }`}
+      >
+        이전
+      </Link>
+
+      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+        <Link
+          key={page}
+          href={`?webgl-page=${page}`}
+          className={`px-4 py-2 rounded-lg ${
+            currentPage === page
+              ? 'bg-black text-white'
+              : 'bg-gray-200 text-black hover:bg-gray-300'
+          }`}
+        >
+          {page}
+        </Link>
+      ))}
+
+      <Link
+        href={`?webgl_page=${Math.min(totalPages, currentPage + 1)}`}
+        className={`px-4 py-2 bg-black text-white rounded-lg ${
+          currentPage === totalPages ? 'opacity-50 pointer-events-none' : ''
+        }`}
+      >
+        다음
+      </Link>
+    </div>
   )
 }
 

@@ -142,7 +142,7 @@ export default function Page() {
   }
 
   return (
-    <div className="w-screen h-screen">
+    <div className="h-screen">
       <Canvas shadows fallback={<div>Sorry no WebGL supported!</div>}>
         <color attach="background" args={['black']} />
 

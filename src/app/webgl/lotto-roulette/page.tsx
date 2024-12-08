@@ -23,7 +23,7 @@ function Roulette() {
 
 export default function Page() {
   return (
-    <div className="w-screen h-screen">
+    <div className="h-screen">
       <Canvas shadows>
         <color attach="background" args={['black']} />
         <ambientLight intensity={0.5} />

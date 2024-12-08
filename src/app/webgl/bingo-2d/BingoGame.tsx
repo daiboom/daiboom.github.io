@@ -1,6 +1,6 @@
 'use client'
 
-import BingoBoard from '@/app/webgl/bingo/BingoBoard'
+import BingoBoard from '@/app/webgl/bingo-2d/BingoBoard'
 import Image from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
 

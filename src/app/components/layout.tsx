@@ -1,11 +1,10 @@
-import { headers } from 'next/headers'
+'use client'
+
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
-export function DefaultLayout({ children }: { children: React.ReactNode }) {
-  const headersList = headers()
-  const pathname = headersList.get('x-pathname') || ''
-
-  console.log(pathname.startsWith('/webgl'), JSON.stringify(headersList))
+export default function Layout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
 
   return (
     <section className="min-h-screen bg-white">

@@ -1,5 +1,5 @@
 import { Bodies, Body, Engine, Events, Render, Runner, World } from 'matter-js'
-import { FRUITS_BASE, Fruit } from './fruits'
+import { CustomBody, FRUITS_BASE, Fruit } from './fruits'
 
 export class SuikaGame {
   private engine: Matter.Engine
@@ -8,7 +8,7 @@ export class SuikaGame {
   private currentBody: Matter.Body | null = null
   private currentFruit: Fruit | null = null
   private disableAction: boolean = false
-  private interval: NodeJS.Timer | null = null
+  private interval: NodeJS.Timeout | null = null
   private numberSuika: number = 0
 
   constructor(container: HTMLElement) {
@@ -50,7 +50,7 @@ export class SuikaGame {
     })
 
     const topLine = Bodies.rectangle(310, 150, 620, 2, {
-      name: 'topLine',
+      label: 'topLine',
       isStatic: true,
       isSensor: true,
       render: { fillStyle: '#E6B143' },
@@ -74,7 +74,7 @@ export class SuikaGame {
         },
       },
       restitution: 0.2,
-    })
+    } as CustomBody)
 
     this.currentBody = body
     this.currentFruit = fruit
@@ -86,12 +86,15 @@ export class SuikaGame {
     event: Matter.IEventCollision<Matter.Engine>
   ): void => {
     event.pairs.forEach((collision) => {
-      if (collision.bodyA.index === collision.bodyB.index) {
-        const index = collision.bodyA.index
+      const bodyA = collision.bodyA as CustomBody
+      const bodyB = collision.bodyB as CustomBody
+
+      if (bodyA.index === bodyB.index) {
+        const index = bodyA.index
 
         if (index === FRUITS_BASE.length - 1) return
 
-        World.remove(this.world, [collision.bodyA, collision.bodyB])
+        World.remove(this.world, [bodyA, bodyB])
 
         const newFruit = FRUITS_BASE[index + 1]
         const newBody = Bodies.circle(
@@ -107,8 +110,8 @@ export class SuikaGame {
                 yScale: 1,
               },
             },
-          }
-        )
+          } as CustomBody
+        ) as CustomBody
 
         World.add(this.world, newBody)
 
@@ -122,8 +125,7 @@ export class SuikaGame {
 
       if (
         !this.disableAction &&
-        (collision.bodyA.name === 'topLine' ||
-          collision.bodyB.name === 'topLine')
+        (bodyA.label === 'topLine' || bodyB.label === 'topLine')
       ) {
         alert('game over')
       }

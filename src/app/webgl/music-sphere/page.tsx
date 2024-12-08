@@ -5,7 +5,7 @@ import { Canvas, Euler, ThreeElements } from '@react-three/fiber'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
-import { DRACOLoader } from 'three/examples/jsm/Addons.js'
+import { DRACOLoader } from 'three-stdlib'
 
 function Model() {
   const gltf = useGLTF(
@@ -24,8 +24,7 @@ function Model() {
   useEffect(() => {
     if (gltf.scene) {
       gltf.scene.traverse((child) => {
-        if (child.isMesh) {
-          // 기존 재질 유지하면서 속성만 수정
+        if (child instanceof THREE.Mesh) {
           child.castShadow = true
           child.receiveShadow = true
         }

@@ -76,8 +76,28 @@ const SOLAR_SYSTEM_DATA = {
   ],
 }
 
-// 궤도 컴포넌트
-const Orbit = ({ radius, visible }) => {
+interface OrbitProps {
+  radius: number
+  visible: boolean
+}
+
+interface PlanetProps {
+  radius: number
+  distance: number
+  color: string
+  speed: number
+}
+
+interface SolarSystemProps {
+  showOrbits: boolean
+}
+
+interface ControlPanelProps {
+  showOrbits: boolean
+  setShowOrbits: (show: boolean) => void
+}
+
+const Orbit = ({ radius, visible }: OrbitProps) => {
   const points = []
   for (let i = 0; i <= 64; i++) {
     const angle = (i / 64) * 2 * Math.PI
@@ -92,20 +112,24 @@ const Orbit = ({ radius, visible }) => {
   const lineGeometry = new THREE.BufferGeometry().setFromPoints(points)
 
   return (
-    <line visible={visible}>
-      <bufferGeometry attach="geometry" {...lineGeometry} />
-      <lineBasicMaterial
-        attach="material"
-        color="white"
-        opacity={0.3}
-        transparent
-      />
-    </line>
+    <primitive
+      object={
+        new THREE.Line(
+          lineGeometry,
+          new THREE.LineBasicMaterial({
+            color: 'white',
+            opacity: 0.3,
+            transparent: true,
+            visible: visible,
+          })
+        )
+      }
+    />
   )
 }
 
-const Planet = ({ radius, distance, color, speed }) => {
-  const ref = useRef()
+const Planet = ({ radius, distance, color, speed }: PlanetProps) => {
+  const ref = useRef<THREE.Mesh>(null!)
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime() * (speed / 30)
@@ -126,7 +150,7 @@ const Planet = ({ radius, distance, color, speed }) => {
   )
 }
 
-const SolarSystem = ({ showOrbits }) => {
+const SolarSystem = ({ showOrbits }: SolarSystemProps) => {
   return (
     <>
       {/* 태양 */}
@@ -167,7 +191,7 @@ const SolarSystem = ({ showOrbits }) => {
 }
 
 // 컨트롤 패널 컴포넌트
-const ControlPanel = ({ showOrbits, setShowOrbits }) => {
+const ControlPanel = ({ showOrbits, setShowOrbits }: ControlPanelProps) => {
   return (
     <div className="absolute top-4 left-4 bg-black/50 p-4 rounded-lg text-white">
       <label className="flex items-center space-x-2">
@@ -199,7 +223,7 @@ export default function Page() {
         <color attach="background" args={['black']} />
         <ambientLight intensity={0.5} /> {/* 환경광 강도 증가 */}
         <pointLight position={[0, 0, 0]} intensity={5} distance={1000} />
-        <hemisphereLight intensity={0.3} groundColor="black" skyColor="white" />
+        <hemisphereLight intensity={0.3} groundColor="black" color={'#fffff'} />
         <PerspectiveCamera makeDefault position={[0, 200, 300]} />
         <OrbitControls />
         <SolarSystem showOrbits={showOrbits} />

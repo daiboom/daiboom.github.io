@@ -1,0 +1,17 @@
+.container {
+  width: 100%;
+  aspect-ratio: 16/9;
+  display: flex;
+  flex-direction: column;
+}
+
+.viewer {
+  flex: 1;
+  position: relative;
+}
+
+.controls {
+  padding: 1rem;
+  background: #2a2a2a;
+  color: white;
+}

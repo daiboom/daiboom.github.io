@@ -187,7 +187,7 @@ export default function Page() {
   const [showOrbits, setShowOrbits] = useState(true)
 
   return (
-    <div className="w-screen h-screen relative">
+    <div className="h-screen relative">
       <ControlPanel showOrbits={showOrbits} setShowOrbits={setShowOrbits} />
       <Canvas
         shadows

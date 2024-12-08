@@ -292,5 +292,5 @@ export default function Page() {
     }
   }, [])
 
-  return <div className="w-screen h-screen" id="app"></div>
+  return <div className="h-screen" id="app"></div>
 }

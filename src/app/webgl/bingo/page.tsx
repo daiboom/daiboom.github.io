@@ -1,3 +1,5 @@
+import BingoGame from '@/app/webgl/bingo/BingoGame'
+
 export default function Page() {
-  return <div>page</div>
+  return <BingoGame />
 }

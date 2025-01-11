@@ -26,7 +26,7 @@ const careerList: CareerData[] = [
     companyName: '자이온아이티에스',
     role: '프론트엔드 개발자',
     jobType: '정규직',
-    years: 2,
+    years: 1,
     position: '선임',
     responsibilty: '팀원',
     department: 'DX사업부/R&D',

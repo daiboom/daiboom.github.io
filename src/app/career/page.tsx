@@ -35,14 +35,34 @@ const careerList: CareerData[] = [
     endDate: '재직중',
     projects: [
       {
-        title: 'XFactor-web',
-        description: 'XFactor 보안솔루션 포탈입니다.',
-        worklist: [
-          '회원 및 게시물, 리워드 관리 기능 등 서비스에 필요한 관리자 화면 개발',
+        title: '데이터레이크 관리자 포탈',
+        description: '데이터레이크 관리자 포탈',
+        worklist: ['로그인 프로세스'],
+        startDate: '24. 12',
+        endDate: '25. 4',
+        skills: [
+          'RESTful API',
+          'Docker',
+          'ESLint',
+          'Prettier',
+          'Typescript',
+          'Nginx',
         ],
+      },
+      {
+        title: 'XFactor-baseline',
+        description: 'XFactor 보안솔루션 포탈입니다.',
+        worklist: ['로그인 프로세스', '토폴로지 시각화'],
         startDate: '24. 04',
-        endDate: '진행중',
-        skills: ['RESTful API', 'Docker', 'ESLint', 'Prettier', 'Typescript'],
+        endDate: '25. 01',
+        skills: [
+          'RESTful API',
+          'Docker',
+          'ESLint',
+          'Prettier',
+          'Typescript',
+          'Nginx',
+        ],
       },
       {
         title: 'core-ui',

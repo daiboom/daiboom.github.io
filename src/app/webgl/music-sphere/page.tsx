@@ -499,20 +499,159 @@ function Torus({
   color = '#ff88cc',
   glowColor = '#ff00ff',
   args = [2, 0.02, 16, 100],
-}: TorusProps) {
+  audioData,
+  frequencyBand = 'bass', // 'bass', 'lowMid', 'mid', 'highMid', 'treble'
+}: TorusProps & { audioData?: any; frequencyBand?: string }) {
   const torusRef = useRef<THREE.Mesh>(null!)
+  const glowRef = useRef<THREE.Mesh>(null!)
+  const materialRef = useRef<THREE.MeshStandardMaterial>(null!)
+  const glowMaterialRef = useRef<THREE.MeshBasicMaterial>(null!)
+  const [currentRotation, setCurrentRotation] = useState(rotation)
+
+  useFrame((state) => {
+    if (
+      torusRef.current &&
+      glowRef.current &&
+      materialRef.current &&
+      glowMaterialRef.current &&
+      audioData
+    ) {
+      // 주파수 대역별 반응 강도 계산
+      const getFrequencyIntensity = (band: string) => {
+        switch (band) {
+          case 'bass':
+            return audioData.bass / 255
+          case 'lowMid':
+            return (audioData.bass + audioData.mid) / 2 / 255
+          case 'mid':
+            return audioData.mid / 255
+          case 'highMid':
+            return (audioData.mid + audioData.treble) / 2 / 255
+          case 'treble':
+            return audioData.treble / 255
+          default:
+            return audioData.volume / 255
+        }
+      }
+
+      // 오디오 반응형 회전 속도
+      const baseRotationSpeed = 0.01
+      const frequencyIntensity = getFrequencyIntensity(frequencyBand)
+      const rotationSpeed = baseRotationSpeed + frequencyIntensity * 0.05
+
+      // 회전 방향 (트레블에 따라 변화)
+      const rotationDirection = audioData.treble > 128 ? 1 : -1
+
+      // 회전 업데이트
+      const newRotation = [
+        currentRotation[0] + rotationSpeed * rotationDirection,
+        currentRotation[1] + rotationSpeed * 0.5,
+        currentRotation[2] + rotationSpeed * 0.3,
+      ] as [number, number, number]
+
+      setCurrentRotation(newRotation)
+      torusRef.current.rotation.set(...newRotation)
+      glowRef.current.rotation.set(...newRotation)
+
+      // 오디오 반응형 크기 변화
+      const baseScale = 1 + frequencyIntensity * 0.5
+      const volumeScale = 1 + (audioData.volume / 255) * 0.3
+      const finalScale = baseScale * volumeScale * scale
+
+      torusRef.current.scale.setScalar(finalScale)
+      glowRef.current.scale.setScalar(finalScale * 1.1)
+
+      // 오디오 반응형 색상 변화
+      if (audioData.volume > 0) {
+        let audioColor: THREE.Color
+
+        // 주파수 대역별 색상 매핑
+        switch (frequencyBand) {
+          case 'bass':
+            audioColor = new THREE.Color(
+              Math.max(0.3, audioData.bass / 255), // 빨강
+              0.2,
+              0.2
+            )
+            break
+          case 'lowMid':
+            audioColor = new THREE.Color(
+              Math.max(0.3, audioData.bass / 255), // 빨강
+              Math.max(0.3, audioData.mid / 255), // 초록
+              0.2
+            )
+            break
+          case 'mid':
+            audioColor = new THREE.Color(
+              0.2,
+              Math.max(0.3, audioData.mid / 255), // 초록
+              0.2
+            )
+            break
+          case 'highMid':
+            audioColor = new THREE.Color(
+              0.2,
+              Math.max(0.3, audioData.mid / 255), // 초록
+              Math.max(0.3, audioData.treble / 255) // 파랑
+            )
+            break
+          case 'treble':
+            audioColor = new THREE.Color(
+              0.2,
+              0.2,
+              Math.max(0.3, audioData.treble / 255) // 파랑
+            )
+            break
+          default:
+            audioColor = new THREE.Color(0.5, 0.5, 0.5)
+        }
+
+        materialRef.current.color = audioColor
+        materialRef.current.emissive = audioColor
+        glowMaterialRef.current.color = audioColor
+
+        // 오디오 반응형 발광 강도
+        const emissiveIntensity = 2 + (audioData.volume / 255) * 3 // 2 ~ 5
+        materialRef.current.emissiveIntensity = emissiveIntensity
+      } else {
+        // 오디오가 없을 때는 기본 색상
+        const defaultColor = new THREE.Color(color)
+        materialRef.current.color = defaultColor
+        materialRef.current.emissive = defaultColor
+        materialRef.current.emissiveIntensity = 2
+        glowMaterialRef.current.color = new THREE.Color(glowColor)
+      }
+
+      // 오디오 반응형 위치 변화 (파동 효과)
+      const bandIndex = ['bass', 'lowMid', 'mid', 'highMid', 'treble'].indexOf(
+        frequencyBand
+      )
+      const waveOffset =
+        Math.sin(state.clock.elapsedTime * 2 + (bandIndex * Math.PI) / 2) * 0.1
+      const frequencyOffset = (audioData.volume / 255) * 0.2
+      const newPosition = [
+        position[0] + waveOffset * frequencyOffset,
+        position[1] + waveOffset * frequencyOffset * 0.5,
+        position[2] + waveOffset * frequencyOffset * 0.3,
+      ] as [number, number, number]
+
+      torusRef.current.position.set(...newPosition)
+      glowRef.current.position.set(...newPosition)
+    }
+  })
 
   return (
     <group>
       {/* 기본 Torus */}
       <mesh
         ref={torusRef}
-        rotation={rotation}
+        rotation={currentRotation}
         position={position}
         scale={scale}
       >
         <torusGeometry args={args} />
         <meshStandardMaterial
+          ref={materialRef}
           color={color}
           emissive={color}
           emissiveIntensity={2}
@@ -521,9 +660,15 @@ function Torus({
       </mesh>
 
       {/* Glow 효과를 위한 추가 Torus */}
-      <mesh rotation={rotation} position={position} scale={scale}>
+      <mesh
+        ref={glowRef}
+        rotation={currentRotation}
+        position={position}
+        scale={scale}
+      >
         <torusGeometry args={[args[0], args[1] * 1.2, args[2], args[3]]} />
         <meshBasicMaterial
+          ref={glowMaterialRef}
           color={glowColor}
           transparent
           opacity={0.3}
@@ -601,11 +746,14 @@ export default function Page() {
             intensity={Math.PI}
           />
           <Sphere position={[0, 0, 0]} audioData={audioData} />
+
           <Torus
             scale={1}
             rotation={[0, 0, 0]}
             color="#ff3366"
             glowColor="#ff00ff"
+            audioData={audioData}
+            frequencyBand="bass"
           />
 
           <Torus
@@ -613,6 +761,8 @@ export default function Page() {
             rotation={[-Math.PI / 3, 0, 0]}
             color="#33ff99"
             glowColor="#00ffaa"
+            audioData={audioData}
+            frequencyBand="treble"
           />
         </group>
 

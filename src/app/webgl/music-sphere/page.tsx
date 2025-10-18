@@ -1,9 +1,9 @@
 'use client'
 
 import { OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'
-import { Canvas, Euler, ThreeElements } from '@react-three/fiber'
+import { Canvas, Euler, ThreeElements, useFrame } from '@react-three/fiber'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { DRACOLoader } from 'three-stdlib'
 
@@ -37,6 +37,100 @@ function Model() {
 
 // 프리로드 경로도 수정
 useGLTF.preload('/assets/vallee_de_nevache_france/scene.gltf')
+
+// 눈보라 효과 컴포넌트
+function SnowStorm() {
+  const snowCount = 2000
+  const snowRef = useRef<THREE.Points>(null!)
+
+  const snowGeometry = useMemo(() => {
+    const geometry = new THREE.BufferGeometry()
+    const positions = new Float32Array(snowCount * 3)
+    const velocities = new Float32Array(snowCount * 3)
+    const sizes = new Float32Array(snowCount)
+    const opacities = new Float32Array(snowCount)
+
+    for (let i = 0; i < snowCount; i++) {
+      // 초기 위치 (카메라 범위 내에서 랜덤하게 분산)
+      positions[i * 3] = (Math.random() - 0.5) * 100 // X축 범위 축소
+      positions[i * 3 + 1] = Math.random() * 80 + 40 // Y축 높이 조정
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 100 // Z축 범위 축소
+
+      // 속도 (아래로 떨어지면서 좌우로 흔들림)
+      velocities[i * 3] = (Math.random() - 0.5) * 0.5 // 좌우 흔들림
+      velocities[i * 3 + 1] = -Math.random() * 0.6 - 0.2 // 아래로 떨어짐
+      velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.5 // 앞뒤 흔들림
+
+      // 크기 (다양한 크기의 눈송이)
+      sizes[i] = Math.random() * 0.8 + 0.2
+
+      // 투명도 (깊이감을 위해)
+      opacities[i] = Math.random() * 0.8 + 0.2
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    geometry.setAttribute('velocity', new THREE.BufferAttribute(velocities, 3))
+    geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1))
+    geometry.setAttribute('opacity', new THREE.BufferAttribute(opacities, 1))
+
+    return geometry
+  }, [snowCount])
+
+  useFrame((state) => {
+    if (!snowRef.current) return
+
+    const positions = snowRef.current.geometry.attributes.position
+      .array as Float32Array
+    const velocities = snowRef.current.geometry.attributes.velocity
+      .array as Float32Array
+
+    for (let i = 0; i < snowCount; i++) {
+      // 위치 업데이트
+      positions[i * 3] += velocities[i * 3]
+      positions[i * 3 + 1] += velocities[i * 3 + 1]
+      positions[i * 3 + 2] += velocities[i * 3 + 2]
+
+      // 바람 효과 (시간에 따른 좌우 흔들림)
+      const windStrength =
+        Math.sin(state.clock.elapsedTime * 0.5 + i * 0.01) * 0.01
+      positions[i * 3] += windStrength
+
+      // 회전 효과 (눈송이가 떨어지면서 회전)
+      const rotation = Math.sin(state.clock.elapsedTime + i * 0.1) * 0.005
+      positions[i * 3] += rotation
+      positions[i * 3 + 2] += rotation * 0.5
+
+      // 바닥에 닿으면 다시 위로
+      if (positions[i * 3 + 1] < -20) {
+        positions[i * 3 + 1] = 80
+        positions[i * 3] = (Math.random() - 0.5) * 100
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 100
+      }
+
+      // 좌우 경계 체크 (카메라 범위 내에서)
+      if (positions[i * 3] > 50) positions[i * 3] = -50
+      if (positions[i * 3] < -50) positions[i * 3] = 50
+      if (positions[i * 3 + 2] > 50) positions[i * 3 + 2] = -50
+      if (positions[i * 3 + 2] < -50) positions[i * 3 + 2] = 50
+    }
+
+    snowRef.current.geometry.attributes.position.needsUpdate = true
+  })
+
+  return (
+    <points ref={snowRef} geometry={snowGeometry}>
+      <pointsMaterial
+        color="white"
+        size={0.8}
+        transparent
+        opacity={0.9}
+        sizeAttenuation
+        alphaTest={0.1}
+        blending={THREE.AdditiveBlending}
+      />
+    </points>
+  )
+}
 
 function Sphere(props: ThreeElements['mesh']) {
   const ref = useRef<THREE.Mesh>(null!)
@@ -160,6 +254,8 @@ export default function Page() {
         <Suspense fallback={null}>
           <Model />
         </Suspense>
+
+        <SnowStorm />
 
         <ambientLight intensity={Math.PI / 2} />
         <directionalLight

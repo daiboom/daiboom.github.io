@@ -154,11 +154,192 @@ function SnowStorm() {
   )
 }
 
-function Sphere(props: ThreeElements['mesh']) {
+// 오디오 분석 훅
+function useAudioAnalyzer() {
+  const [audioData, setAudioData] = useState({
+    frequencyData: new Uint8Array(256),
+    timeData: new Uint8Array(256),
+    bass: 0,
+    mid: 0,
+    treble: 0,
+    volume: 0,
+  })
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const dataArrayRef = useRef<Uint8Array | null>(null)
+  const animationFrameRef = useRef<number>()
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null)
+
+  const startAudioAnalysis = async () => {
+    try {
+      console.log('오디오 분석 시작...')
+      setIsLoading(true)
+
+      // 오디오 컨텍스트 초기화
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContext()
+        analyserRef.current = audioContextRef.current.createAnalyser()
+        analyserRef.current.fftSize = 512
+        analyserRef.current.smoothingTimeConstant = 0.8
+        dataArrayRef.current = new Uint8Array(
+          analyserRef.current.frequencyBinCount
+        )
+      }
+
+      // 오디오 컨텍스트가 일시정지 상태라면 재개
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume()
+        console.log('오디오 컨텍스트 재개됨')
+      }
+
+      // MP3 파일 로드 및 재생
+      if (!audioRef.current) {
+        audioRef.current = new Audio()
+        audioRef.current.src =
+          '/webgl/music-sphere/good-night-lofi-cozy-chill-music-160166.mp3'
+        audioRef.current.loop = true
+        audioRef.current.volume = 0.5
+        audioRef.current.crossOrigin = 'anonymous'
+
+        // 오디오 이벤트 리스너 추가
+        audioRef.current.addEventListener('loadstart', () =>
+          console.log('오디오 로딩 시작')
+        )
+        audioRef.current.addEventListener('canplay', () =>
+          console.log('오디오 재생 준비됨')
+        )
+        audioRef.current.addEventListener('error', (e) =>
+          console.error('오디오 로딩 오류:', e)
+        )
+
+        // 오디오 컨텍스트에 연결
+        sourceRef.current = audioContextRef.current.createMediaElementSource(
+          audioRef.current
+        )
+        sourceRef.current.connect(analyserRef.current)
+        analyserRef.current.connect(audioContextRef.current.destination)
+
+        console.log('오디오 파일 로드됨')
+      }
+
+      // 오디오 재생
+      await audioRef.current.play()
+      setIsPlaying(true)
+      setIsLoading(false)
+      console.log('오디오 재생 시작됨')
+
+      const updateAudioData = () => {
+        if (analyserRef.current && dataArrayRef.current) {
+          analyserRef.current.getByteFrequencyData(dataArrayRef.current)
+
+          // 주파수 대역별 분석
+          const bass =
+            dataArrayRef.current.slice(0, 32).reduce((a, b) => a + b, 0) / 32
+          const mid =
+            dataArrayRef.current.slice(32, 128).reduce((a, b) => a + b, 0) / 96
+          const treble =
+            dataArrayRef.current.slice(128, 256).reduce((a, b) => a + b, 0) /
+            128
+          const volume =
+            dataArrayRef.current.reduce((a, b) => a + b, 0) /
+            dataArrayRef.current.length
+
+          setAudioData({
+            frequencyData: new Uint8Array(dataArrayRef.current),
+            timeData: new Uint8Array(dataArrayRef.current),
+            bass,
+            mid,
+            treble,
+            volume,
+          })
+        }
+        animationFrameRef.current = requestAnimationFrame(updateAudioData)
+      }
+      updateAudioData()
+    } catch (error) {
+      console.error('오디오 재생 오류:', error)
+      setIsLoading(false)
+      alert(
+        '오디오 재생에 실패했습니다. 브라우저에서 오디오 재생을 허용해주세요.'
+      )
+    }
+  }
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      setIsPlaying(false)
+      console.log('오디오 정지됨')
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+      if (audioRef.current) {
+        audioRef.current.pause()
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close()
+      }
+    }
+  }, [])
+
+  return { audioData, startAudioAnalysis, stopAudio, isPlaying, isLoading }
+}
+
+// 오디오 시각화 컨트롤 패널
+function AudioControlPanel({
+  onStartAudio,
+  onStopAudio,
+  isPlaying,
+  isLoading,
+}: {
+  onStartAudio: () => void
+  onStopAudio: () => void
+  isPlaying: boolean
+  isLoading: boolean
+}) {
+  return (
+    <div className="absolute top-4 right-4 z-10 flex gap-2">
+      <button
+        onClick={isPlaying ? onStopAudio : onStartAudio}
+        disabled={isLoading}
+        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+          isLoading
+            ? 'bg-gray-400 text-white cursor-not-allowed'
+            : isPlaying
+            ? 'bg-red-500 text-white hover:bg-red-600'
+            : 'bg-purple-500 text-white hover:bg-purple-600'
+        }`}
+      >
+        {isLoading ? '⏳ 로딩...' : isPlaying ? '⏸️ 정지' : '🎵 LoFi 음악 재생'}
+      </button>
+    </div>
+  )
+}
+
+function Sphere(props: ThreeElements['mesh'] & { audioData?: any }) {
   const ref = useRef<THREE.Mesh>(null!)
+  const glowRef = useRef<THREE.Mesh>(null!)
   const [hovered, hover] = useState(false)
   const [clicked, click] = useState(false)
-  // useFrame((state, delta) => (ref.current.rotation.x += delta))
+
+  useFrame(() => {
+    if (ref.current && glowRef.current && props.audioData) {
+      // 오디오 볼륨에 따른 크기 변화 (크기만 변경)
+      const volumeScale = Math.max(1, 1 + (props.audioData.volume / 255) * 2)
+      const finalScale = (clicked ? 1.5 : 1) * volumeScale
+
+      ref.current.scale.setScalar(finalScale)
+      glowRef.current.scale.setScalar(finalScale * 1.1)
+    }
+  })
 
   return (
     <group>
@@ -170,7 +351,6 @@ function Sphere(props: ThreeElements['mesh']) {
         onClick={() => click(!clicked)}
         onPointerOver={() => hover(true)}
         onPointerOut={() => hover(false)}
-        // geometry={sphere}
       >
         <sphereGeometry args={[1.1, 28, 28]} />
         <meshStandardMaterial
@@ -182,7 +362,7 @@ function Sphere(props: ThreeElements['mesh']) {
       </mesh>
 
       {/* Glow 효과를 위한 추가 Sphere */}
-      <mesh {...props} scale={clicked ? 1.5 : 1.1}>
+      <mesh {...props} ref={glowRef} scale={clicked ? 1.5 : 1.1}>
         <sphereGeometry args={[1, 28, 28]} />
         <meshBasicMaterial
           color={hovered ? '#ff00ff' : '#ff9933'}
@@ -257,8 +437,19 @@ export default function Page() {
     scale: 1.2,
   }
 
+  // 오디오 분석 훅 사용
+  const { audioData, startAudioAnalysis, stopAudio, isPlaying, isLoading } =
+    useAudioAnalyzer()
+
   return (
-    <div className="h-screen">
+    <div className="h-screen relative">
+      {/* 오디오 컨트롤 패널 */}
+      <AudioControlPanel
+        onStartAudio={startAudioAnalysis}
+        onStopAudio={stopAudio}
+        isPlaying={isPlaying}
+        isLoading={isLoading}
+      />
       <Canvas shadows fallback={<div>Sorry no WebGL supported!</div>}>
         <color attach="background" args={['#e8f4f8']} />
         <fogExp2 attach="fog" args={['#ffffff', 0.003]} />
@@ -302,7 +493,7 @@ export default function Page() {
             decay={0}
             intensity={Math.PI}
           />
-          <Sphere position={[0, 0, 0]} />
+          <Sphere position={[0, 0, 0]} audioData={audioData} />
           <Torus
             scale={1}
             rotation={[0, 0, 0]}

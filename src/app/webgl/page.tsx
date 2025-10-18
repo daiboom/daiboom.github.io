@@ -12,7 +12,7 @@ function WebGLGalleryContent() {
 
   const projects = [
     {
-      href: '/webgl/pheonix',
+      href: '/webgl/phoenix',
       title: '불사조',
       description: '화려한 파티클 효과를 활용한 불사조 애니메이션',
     },

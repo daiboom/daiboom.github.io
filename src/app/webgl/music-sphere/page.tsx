@@ -260,7 +260,8 @@ export default function Page() {
   return (
     <div className="h-screen">
       <Canvas shadows fallback={<div>Sorry no WebGL supported!</div>}>
-        <color attach="background" args={['black']} />
+        <color attach="background" args={['#e8f4f8']} />
+        <fogExp2 attach="fog" args={['#ffffff', 0.003]} />
 
         <PerspectiveCamera makeDefault position={[45, 45, 45]} zoom={3} />
         <OrbitControls

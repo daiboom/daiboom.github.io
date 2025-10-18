@@ -2,7 +2,11 @@
 
 import { OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'
 import { Canvas, Euler, ThreeElements, useFrame } from '@react-three/fiber'
-import { Bloom, EffectComposer } from '@react-three/postprocessing'
+import {
+  Bloom,
+  ChromaticAberration,
+  EffectComposer,
+} from '@react-three/postprocessing'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { DRACOLoader } from 'three-stdlib'
@@ -32,7 +36,13 @@ function Model() {
     }
   }, [gltf])
 
-  return <primitive object={gltf.scene} scale={0.002} position={[0, -10, 0]} />
+  return (
+    <primitive
+      object={gltf.scene as any}
+      scale={0.002}
+      position={[0, -10, 0]}
+    />
+  )
 }
 
 // 프리로드 경로도 수정
@@ -219,8 +229,10 @@ function useAudioAnalyzer() {
         sourceRef.current = audioContextRef.current.createMediaElementSource(
           audioRef.current
         )
-        sourceRef.current.connect(analyserRef.current)
-        analyserRef.current.connect(audioContextRef.current.destination)
+        if (analyserRef.current) {
+          sourceRef.current.connect(analyserRef.current)
+          analyserRef.current.connect(audioContextRef.current.destination)
+        }
 
         console.log('오디오 파일 로드됨')
       }
@@ -248,8 +260,8 @@ function useAudioAnalyzer() {
             dataArrayRef.current.length
 
           setAudioData({
-            frequencyData: new Uint8Array(dataArrayRef.current),
-            timeData: new Uint8Array(dataArrayRef.current),
+            frequencyData: new Uint8Array(dataArrayRef.current.buffer),
+            timeData: new Uint8Array(dataArrayRef.current.buffer),
             bass,
             mid,
             treble,
@@ -327,17 +339,54 @@ function AudioControlPanel({
 function Sphere(props: ThreeElements['mesh'] & { audioData?: any }) {
   const ref = useRef<THREE.Mesh>(null!)
   const glowRef = useRef<THREE.Mesh>(null!)
+  const materialRef = useRef<THREE.MeshStandardMaterial>(null!)
+  const glowMaterialRef = useRef<THREE.MeshBasicMaterial>(null!)
   const [hovered, hover] = useState(false)
   const [clicked, click] = useState(false)
 
   useFrame(() => {
-    if (ref.current && glowRef.current && props.audioData) {
-      // 오디오 볼륨에 따른 크기 변화 (크기만 변경)
+    if (
+      ref.current &&
+      glowRef.current &&
+      materialRef.current &&
+      glowMaterialRef.current &&
+      props.audioData
+    ) {
+      // 오디오 볼륨에 따른 크기 변화
       const volumeScale = Math.max(1, 1 + (props.audioData.volume / 255) * 2)
       const finalScale = (clicked ? 1.5 : 1) * volumeScale
 
       ref.current.scale.setScalar(finalScale)
       glowRef.current.scale.setScalar(finalScale * 1.1)
+
+      // 오디오 주파수에 따른 색상 변화
+      if (props.audioData.volume > 0) {
+        // 주파수에 따른 색상 변화
+        const bassIntensity = Math.max(0.3, props.audioData.bass / 255) // 최소 0.3 보장
+        const midIntensity = Math.max(0.3, props.audioData.mid / 255) // 최소 0.3 보장
+        const trebleIntensity = Math.max(0.3, props.audioData.treble / 255) // 최소 0.3 보장
+
+        // RGB 색상 계산 (베이스=빨강, 미드=초록, 트레블=파랑)
+        const audioColor = new THREE.Color(
+          bassIntensity,
+          midIntensity,
+          trebleIntensity
+        )
+
+        // 호버 상태에 따른 색상 결정
+        const finalColor = hovered ? audioColor : audioColor
+        const finalEmissive = hovered ? audioColor : audioColor
+
+        materialRef.current.color = finalColor
+        materialRef.current.emissive = finalEmissive
+        glowMaterialRef.current.color = finalColor
+      } else {
+        // 오디오가 없을 때는 기본 색상
+        const defaultColor = hovered ? '#ff00ff' : '#ff9933'
+        materialRef.current.color = new THREE.Color(defaultColor)
+        materialRef.current.emissive = new THREE.Color(defaultColor)
+        glowMaterialRef.current.color = new THREE.Color(defaultColor)
+      }
     }
   })
 
@@ -354,8 +403,9 @@ function Sphere(props: ThreeElements['mesh'] & { audioData?: any }) {
       >
         <sphereGeometry args={[1.1, 28, 28]} />
         <meshStandardMaterial
-          color={hovered ? '#ff00ff' : '#ff9933'}
-          emissive={hovered ? '#ff00ff' : '#ff9933'}
+          ref={materialRef}
+          color="#ff9933"
+          emissive="#ff9933"
           emissiveIntensity={2}
           toneMapped={false}
         />
@@ -365,7 +415,8 @@ function Sphere(props: ThreeElements['mesh'] & { audioData?: any }) {
       <mesh {...props} ref={glowRef} scale={clicked ? 1.5 : 1.1}>
         <sphereGeometry args={[1, 28, 28]} />
         <meshBasicMaterial
-          color={hovered ? '#ff00ff' : '#ff9933'}
+          ref={glowMaterialRef}
+          color="#ff9933"
           transparent
           opacity={0.3}
           side={THREE.BackSide}
@@ -373,6 +424,62 @@ function Sphere(props: ThreeElements['mesh'] & { audioData?: any }) {
         />
       </mesh>
     </group>
+  )
+}
+
+// 오디오 반응형 Bloom 효과 컴포넌트
+function AudioReactiveBloom({ audioData }: { audioData: any }) {
+  const [bloomIntensity, setBloomIntensity] = useState(2.0)
+  const [bloomThreshold, setBloomThreshold] = useState(0.2)
+  const [bloomRadius, setBloomRadius] = useState(0.8)
+
+  useFrame(() => {
+    if (audioData.volume > 0) {
+      // 오디오 볼륨에 따른 Bloom 강도 변화
+      const volumeIntensity = 2.0 + (audioData.volume / 255) * 3.0 // 2.0 ~ 5.0
+
+      // 주파수에 따른 Bloom 임계값 변화 (색상에 영향)
+      const bassIntensity = Math.max(0.1, audioData.bass / 255)
+      const midIntensity = Math.max(0.1, audioData.mid / 255)
+      const trebleIntensity = Math.max(0.1, audioData.treble / 255)
+
+      // 주파수에 따른 Bloom 반경 변화 (색상 분산에 영향)
+      const frequencyRadius =
+        0.5 + ((bassIntensity + midIntensity + trebleIntensity) / 3) * 1.0
+
+      // 동적 임계값 (주파수에 따라 변화)
+      const dynamicThreshold = 0.1 + (audioData.volume / 255) * 0.3
+
+      setBloomIntensity(volumeIntensity)
+      setBloomThreshold(dynamicThreshold)
+      setBloomRadius(frequencyRadius)
+    } else {
+      // 오디오가 없을 때는 기본값
+      setBloomIntensity(2.0)
+      setBloomThreshold(0.2)
+      setBloomRadius(0.8)
+    }
+  })
+
+  return (
+    <>
+      <Bloom
+        intensity={bloomIntensity}
+        luminanceThreshold={bloomThreshold}
+        luminanceSmoothing={0.9}
+        mipmapBlur
+        radius={bloomRadius}
+      />
+      {/* 주파수에 따른 색상 필터 효과 */}
+      {audioData.volume > 0 && (
+        <ChromaticAberration
+          offset={[
+            0.001 + (audioData.bass / 255) * 0.002,
+            0.001 + (audioData.treble / 255) * 0.002,
+          ]}
+        />
+      )}
+    </>
   )
 }
 
@@ -516,13 +623,7 @@ export default function Page() {
           </>
         ) : null}
         <EffectComposer>
-          <Bloom
-            intensity={2.0}
-            luminanceThreshold={0.2}
-            luminanceSmoothing={0.9}
-            mipmapBlur
-            radius={0.8}
-          />
+          <AudioReactiveBloom audioData={audioData} />
         </EffectComposer>
       </Canvas>
     </div>

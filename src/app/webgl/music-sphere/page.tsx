@@ -43,6 +43,27 @@ function SnowStorm() {
   const snowCount = 2000
   const snowRef = useRef<THREE.Points>(null!)
 
+  // 동그란 텍스처 생성
+  const snowTexture = useMemo(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 64
+    canvas.height = 64
+    const context = canvas.getContext('2d')!
+
+    // 그라디언트로 동그란 모양 생성
+    const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32)
+    gradient.addColorStop(0, 'rgba(255, 255, 255, 1)')
+    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)')
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
+
+    context.fillStyle = gradient
+    context.fillRect(0, 0, 64, 64)
+
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.needsUpdate = true
+    return texture
+  }, [])
+
   const snowGeometry = useMemo(() => {
     const geometry = new THREE.BufferGeometry()
     const positions = new Float32Array(snowCount * 3)
@@ -62,7 +83,7 @@ function SnowStorm() {
       velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.5 // 앞뒤 흔들림
 
       // 크기 (다양한 크기의 눈송이)
-      sizes[i] = Math.random() * 0.8 + 0.2
+      sizes[i] = Math.random() * 0.5 + 0.2
 
       // 투명도 (깊이감을 위해)
       opacities[i] = Math.random() * 0.8 + 0.2
@@ -120,11 +141,12 @@ function SnowStorm() {
   return (
     <points ref={snowRef} geometry={snowGeometry}>
       <pointsMaterial
+        map={snowTexture}
         color="white"
-        size={0.8}
+        size={1.0}
         transparent
         opacity={0.9}
-        sizeAttenuation
+        sizeAttenuation={true}
         alphaTest={0.1}
         blending={THREE.AdditiveBlending}
       />

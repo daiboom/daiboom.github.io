@@ -150,6 +150,8 @@ export default function Page() {
         <OrbitControls
           minDistance={15}
           maxDistance={75}
+          minPolarAngle={Math.PI / 6}
+          maxPolarAngle={Math.PI / 2.5}
           enablePan={true}
           enableZoom={true}
           enableRotate={true}

@@ -6,37 +6,6 @@ import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 
-// 타임라인 컨트롤 컴포넌트
-function TimelineControl({
-  currentTime,
-  duration,
-  isPlaying,
-  onTimeChange,
-  onPlayPause,
-  onReset,
-}: {
-  currentTime: number
-  duration: number
-  isPlaying: boolean
-  onTimeChange: (time: number) => void
-  onPlayPause: () => void
-  onReset: () => void
-}) {
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
-
-  const getPhaseLabel = (time: number) => {
-    if (time < 3) return '빅뱅 폭발 단계'
-    if (time < 15) return '은하 형성 중'
-    return '은하 회전 단계'
-  }
-
-  return null // 이제 ControlPanel에 통합됨
-}
-
 // 빅뱅 -> 은하수 효과
 function BigBangGalaxy({
   particleCount,
@@ -83,33 +52,23 @@ function BigBangGalaxy({
       // 나선 각도 (거리에 비례) - 나선팔이 구별되도록 더 완화
       const spiralTightness = 0.5 // 나선팔이 구별되도록 더 완화 (1.0 → 0.5)
 
-      // X축 방향 흩뿌리기: 나선을 따라 앞뒤로 흩어짐 (거리에 따라 조절)
       const spiralScatter =
         (Math.random() - 0.5) * 0.3 * (0.5 + distanceRatio * 1.5)
-
-      // 나선팔이 중심부 구형에서 시작되도록 수정
-      const effectiveRadius = galaxyRadius // 실제 은하 반지름 사용
-
-      // 나선팔 시작점이 스파이럴이 많이 진행된 상태에서 구형으로 모여서 외곽으로 뻗쳐나가도록 조정
       let spiralCenterAngle
       if (distanceRatio < 0.2) {
-        // 중심부 (0-20%): 스파이럴이 많이 진행된 상태에서 구형으로 모임
-        // 스파이럴이 이미 많이 진행된 상태에서 시작
-        const spiralProgress = distanceRatio / 0.2 // 0-1 (0%에서 시작)
-        const preSpiralOffset = 3.0 + spiralProgress * 2.0 // 3.0에서 5.0까지 (이미 많이 진행된 상태)
+        const spiralProgress = distanceRatio / 0.2
+        const preSpiralOffset = 3.0 + spiralProgress * 2.0
         spiralCenterAngle =
           baseArmAngle +
           (galaxyRadius * distanceRatio + spiralScatter) * preSpiralOffset
       } else {
-        // 나선팔 (20%+): 구형에서 뻗쳐나가는 나선팔
-        const spiralProgress = (distanceRatio - 0.2) / 0.8 // 0-1 (20%에서 시작)
-        const spiralOffset = 5.0 + spiralProgress * (spiralTightness - 5.0) // 5.0에서 spiralTightness까지
+        const spiralProgress = (distanceRatio - 0.2) / 0.8
+        const spiralOffset = 5.0 + spiralProgress * (spiralTightness - 5.0)
         spiralCenterAngle =
           baseArmAngle +
           (galaxyRadius * distanceRatio + spiralScatter) * spiralOffset
       }
 
-      // 나선팔로부터의 각도 오프셋 (가우시안 분포로 나선 주변에 집중)
       const gaussianRandom = () => {
         let u = 0,
           v = 0
@@ -117,64 +76,47 @@ function BigBangGalaxy({
         while (v === 0) v = Math.random()
         return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v)
       }
-
-      // 나선팔: 동그란 단면, 외곽으로 갈수록 얇아짐
       let angularOffset, radialSpread
-      let finalAngle // 최종 각도
-      let yPosition // Y축 위치
+      let finalAngle
+      let yPosition
 
       if (distanceRatio < 0.2) {
-        // 중심부 (0-20%): 스파이럴이 많이 진행된 상태에서 구형으로 모이는 부분
-        const armStartRadius = 1.0 // 중심부에서의 나선팔 시작 반지름 (매우 두껍게)
-        const armEndRadius = 0.8 // 팽대부 끝에서의 나선팔 반지름 (여전히 두껍게)
-
-        // 팽대부 내에서의 진행도
-        const armProgress = distanceRatio / 0.2 // 0-1 (0%에서 시작)
+        const armStartRadius = 1.0
+        const armEndRadius = 0.8
+        const armProgress = distanceRatio / 0.2
         const armRadius =
           armStartRadius - (armStartRadius - armEndRadius) * armProgress
 
-        // 팽대부 중심에서의 거리 (원통형 단면)
         const rand = Math.random()
         let scatterFactor
-
-        // 중심에 가까울수록 더 집중적으로
-        const centerProximity = 1 - armProgress // 0에서 1로 (중심부에서 멀어질수록 감소)
+        const centerProximity = 1 - armProgress
 
         if (rand < 0.8 + centerProximity * 0.15) {
-          // 80-95%는 나선팔 심지에 집중 (중심부에 가까울수록 더 집중)
           scatterFactor =
-            0.001 + Math.random() * (0.02 + centerProximity * 0.02) // 0.001 ~ 0.04 (매우 집중)
+            0.001 + Math.random() * (0.02 + centerProximity * 0.02)
         } else {
-          // 나머지는 나선팔 주변에 분포
-          scatterFactor = 0.05 + Math.random() * 0.3 // 0.05 ~ 0.35 (더 집중)
+          scatterFactor = 0.05 + Math.random() * 0.3
         }
 
         const effectiveRadius = armRadius * scatterFactor
-
-        // 나선팔 중심으로부터의 각도 오프셋 (원통형 단면)
         const angleOffset = Math.random() * 2 * Math.PI
         angularOffset = effectiveRadius * Math.cos(angleOffset)
         radialSpread = effectiveRadius * Math.sin(angleOffset)
-
         finalAngle = spiralCenterAngle + angularOffset
 
-        // Y축 위치 계산 (구형으로 모이는 팽대부)
-        const yMaxArmRadius = 1.0 // 중심부에서의 최대 Y축 반지름 (매우 두껍게)
-        const yMinArmRadius = 0.8 // 팽대부 끝에서의 Y축 반지름 (여전히 두껍게)
+        const yMaxArmRadius = 1.0
+        const yMinArmRadius = 0.8
         const yArmRadius =
           yMaxArmRadius - (yMaxArmRadius - yMinArmRadius) * armProgress
 
-        // Y축도 같은 방식으로 흩뿌리기 (나선팔 중심에 집중)
         const yRand = Math.random()
         let yScatterFactor
 
         if (yRand < 0.8 + centerProximity * 0.15) {
-          // 80-95%는 나선팔 심지에 집중
           yScatterFactor =
-            0.001 + Math.random() * (0.02 + centerProximity * 0.02) // 0.001 ~ 0.04 (매우 집중)
+            0.001 + Math.random() * (0.02 + centerProximity * 0.02)
         } else {
-          // 나머지는 나선팔 주변에 분포
-          yScatterFactor = 0.05 + Math.random() * 0.3 // 0.05 ~ 0.35 (더 집중)
+          yScatterFactor = 0.05 + Math.random() * 0.3
         }
 
         const yEffectiveRadius = yArmRadius * yScatterFactor
@@ -182,71 +124,49 @@ function BigBangGalaxy({
         const yOffsetSign = Math.random() < 0.5 ? -1 : 1
         yPosition = yOffsetSign * yOffsetDistance
       } else {
-        // 나선팔 (20%+): 구형 팽대부에서 뻗어나가는 원통형 나선팔
-        // 구형 팽대부 끝에서 시작되어 외곽으로 뻗어나감
-        const armStartRadius = 0.8 // 팽대부 끝에서의 나선팔 시작 반지름 (팽대부와 연결)
-        const armEndRadius = 0.03 // 외곽에서의 나선팔 끝 반지름 (가장 얇게)
-
-        // 나선팔이 팽대부에서 나가는 형태로 두께 감소
-        const armProgress = (distanceRatio - 0.2) / 0.8 // 0-1 (20%에서 시작)
+        const armStartRadius = 0.8
+        const armEndRadius = 0.03
+        const armProgress = (distanceRatio - 0.2) / 0.8
         const armRadius =
           armStartRadius - (armStartRadius - armEndRadius) * armProgress
 
-        // 나선팔 중심에서의 거리 (원통형 단면)
-        // 중심부에서 나선팔이 뻗어나오는 효과를 강화
         const rand = Math.random()
         let scatterFactor
-
-        // 중심부에 가까울수록 더 집중적으로
-        const centerProximity = 1 - armProgress // 0에서 1로 (중심부에서 멀어질수록 감소)
+        const centerProximity = 1 - armProgress
 
         if (rand < 0.4 + centerProximity * 0.2) {
-          // 40-60%는 나선팔 심지에 집중 (팽대부에 가까울수록 더 집중)
-          scatterFactor = 0.01 + Math.random() * (0.05 + centerProximity * 0.05) // 0.01 ~ 0.1 (적당히 집중)
+          scatterFactor = 0.01 + Math.random() * (0.05 + centerProximity * 0.05)
         } else {
-          // 나머지는 나선팔 주변에 넓게 분포
-          scatterFactor = 0.3 + Math.random() * 1.2 // 0.3 ~ 1.5 (넓게 흩뿌림)
+          scatterFactor = 0.3 + Math.random() * 1.2
         }
 
         const effectiveRadius = armRadius * scatterFactor
-
-        // 나선팔 중심으로부터의 각도 오프셋 (원통형 단면)
         const angleOffset = Math.random() * 2 * Math.PI
         angularOffset = effectiveRadius * Math.cos(angleOffset)
         radialSpread = effectiveRadius * Math.sin(angleOffset)
-
         finalAngle = spiralCenterAngle + angularOffset
       }
 
-      // 최종 나선 각도 (중심부는 랜덤, 나선팔은 계산된 각도)
       const spiralAngle = finalAngle
 
-      // Y축 위치 계산: 구형 팽대부와 원통형 나선팔
       if (distanceRatio < 0.2) {
-        // 중심부 (구형 팽대부): 이미 위에서 계산됨
         // yPosition은 이미 설정됨
       } else {
-        // 나선팔: 구형 팽대부에서 뻗어나가는 원통형 Y축
-        const yMaxArmRadius = 0.8 // 팽대부 끝에서의 Y축 반지름 (팽대부와 연결)
-        const yMinArmRadius = 0.03 // 외곽에서의 최소 Y축 반지름 (가장 얇게)
-        const yArmProgress = (distanceRatio - 0.2) / 0.8 // 0-1 (20%에서 시작)
+        const yMaxArmRadius = 0.8
+        const yMinArmRadius = 0.03
+        const yArmProgress = (distanceRatio - 0.2) / 0.8
         const yArmRadius =
           yMaxArmRadius - (yMaxArmRadius - yMinArmRadius) * yArmProgress
 
-        // Y축도 같은 방식으로 흩뿌리기 (나선팔 중심에 집중)
         const yRand = Math.random()
         let yScatterFactor
-
-        // 팽대부에 가까울수록 더 집중적으로
-        const yCenterProximity = 1 - yArmProgress // 0에서 1로 (팽대부에서 멀어질수록 감소)
+        const yCenterProximity = 1 - yArmProgress
 
         if (yRand < 0.4 + yCenterProximity * 0.2) {
-          // 40-60%는 나선팔 심지에 집중 (팽대부에 가까울수록 더 집중)
           yScatterFactor =
-            0.01 + Math.random() * (0.05 + yCenterProximity * 0.05) // 0.01 ~ 0.1 (적당히 집중)
+            0.01 + Math.random() * (0.05 + yCenterProximity * 0.05)
         } else {
-          // 나머지는 나선팔 주변에 넓게 분포
-          yScatterFactor = 0.3 + Math.random() * 1.2 // 0.3 ~ 1.5 (넓게 흩뿌림)
+          yScatterFactor = 0.3 + Math.random() * 1.2
         }
 
         const yEffectiveRadius = yArmRadius * yScatterFactor
@@ -255,65 +175,40 @@ function BigBangGalaxy({
         yPosition = yOffsetSign * yOffsetDistance
       }
 
-      // 나선팔이 중심에서 시작되도록 위치 계산
       let galaxyPosition
+      const spiralRadius = galaxyRadius * distanceRatio
+      galaxyPosition = new THREE.Vector3(
+        Math.cos(spiralAngle) * spiralRadius,
+        yPosition,
+        Math.sin(spiralAngle) * spiralRadius
+      )
 
-      if (distanceRatio < 0.2) {
-        // 구형 팽대부: 중심에서 시작하여 구형 팽대부를 형성
-        const spiralRadius = galaxyRadius * distanceRatio // 중심에서 시작
-        galaxyPosition = new THREE.Vector3(
-          Math.cos(spiralAngle) * spiralRadius,
-          yPosition,
-          Math.sin(spiralAngle) * spiralRadius
-        )
-      } else {
-        // 나선팔: 구형 팽대부에서 시작하여 나선을 따라 뻗어나감
-        const spiralRadius = galaxyRadius * distanceRatio // 팽대부에서 시작
-        galaxyPosition = new THREE.Vector3(
-          Math.cos(spiralAngle) * spiralRadius,
-          yPosition,
-          Math.sin(spiralAngle) * spiralRadius
-        )
-      }
-
-      // 3D 거리 체크: 블랙홀 중심(0,0,0)으로부터의 거리
       const distanceFromBlackHole = galaxyPosition.length()
-      const minDistance3D = 0 // 나선팔이 블랙홀과 밀착 (0으로 설정)
+      const minDistance3D = 0
 
-      // 블랙홀에 너무 가까우면 최소 거리로 밀어내기
       if (distanceFromBlackHole < minDistance3D) {
         galaxyPosition.normalize().multiplyScalar(minDistance3D)
       }
 
-      // 색상 (모두 흰색)
-      const color = new THREE.Color(1, 1, 1) // 순수한 흰색
-
-      // 나선팔 중심으로부터의 거리에 따른 밝기 감소
-      // 중심부에서 나선팔이 뻗어나오는 효과를 강화
+      const color = new THREE.Color(1, 1, 1)
       const centerProximity =
         distanceRatio < 0.25 ? 1 : 1 - (distanceRatio - 0.25) / 0.75
       const armDistanceFactor = Math.exp(
         -Math.abs(angularOffset) * (1.5 + centerProximity * 0.5)
       )
 
-      // 크기 (나선 중심에서 크고, 멀어질수록 작게)
       let size
       if (distanceRatio < 0.1) {
-        // 중심 코어 - 중간 크기
         size = 0.05 - distanceRatio * 0.2
       } else if (distanceRatio < 0.4) {
-        // 중간부 - 작은 크기
         size = 0.02 - (distanceRatio - 0.1) * 0.03
       } else {
-        // 외곽부 - 극도로 미세한 파티클 (먼지처럼 작음)
         size = 0.01 - (distanceRatio - 0.4) * 0.015
       }
 
-      // 나선팔에서 멀어질수록 파티클 크기 감소
-      // 중심부에서 나선팔이 뻗어나오는 효과를 강화
       size =
         size * (0.4 + armDistanceFactor * 0.6) * (0.7 + centerProximity * 0.3)
-      size = Math.max(size, 0.002) // 최소 크기 (매우 작게)
+      size = Math.max(size, 0.002)
 
       data.push({
         initialVelocity,
@@ -616,16 +511,6 @@ function BigBangGalaxy({
       }
     }
   })
-
-  // 평균 글로우 강도 계산
-  const averageGlowIntensity = useMemo(() => {
-    if (particleData.length === 0) return 2.5
-    const totalGlow = particleData.reduce(
-      (sum, data) => sum + data.glowIntensity,
-      0
-    )
-    return totalGlow / particleData.length
-  }, [particleData])
 
   return (
     <instancedMesh ref={particlesRef} args={[null, null, particleCount]}>

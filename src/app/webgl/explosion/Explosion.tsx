@@ -31,8 +31,9 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
       const spiralArm = Math.floor(Math.random() * 3)
       const baseArmAngle = (spiralArm * Math.PI * 2) / 3
 
-      // 은하 중심으로부터의 거리
-      const galaxyRadius = Math.pow(Math.random(), 0.5) * 12
+      // 은하 중심으로부터의 거리 (블랙홀 주변은 비워둠)
+      const minRadius = 0.05 // 블랙홀 바로 밖부터 시작
+      const galaxyRadius = minRadius + Math.pow(Math.random(), 0.5) * 11.95
 
       // 나선 각도 (거리에 비례)
       const spiralTightness = 0.8
@@ -54,8 +55,8 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
       // 최종 나선 각도
       const spiralAngle = spiralCenterAngle + angularOffset
 
-      // 거리 비율 (0: 중심, 1: 외곽)
-      const distanceRatio = galaxyRadius / 12
+      // 거리 비율 (0: 블랙홀 바로 밖, 1: 외곽)
+      const distanceRatio = (galaxyRadius - minRadius) / (12 - minRadius)
 
       // 나선 중심으로부터의 거리 (파티클이 나선 주변에 퍼짐)
       const radialSpread =
@@ -68,30 +69,11 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
         Math.sin(spiralAngle) * (galaxyRadius + radialSpread)
       )
 
-      // 색상 (중심부는 노란색, 외곽은 청록색)
-      let hue, saturation, lightness
-      if (distanceRatio < 0.2) {
-        // 중심부 - 밝은 노란색/흰색
-        hue = 0.15
-        saturation = 0.3 + distanceRatio
-        lightness = 0.9 - distanceRatio * 2
-      } else if (distanceRatio < 0.5) {
-        // 중간부 - 청록색
-        hue = 0.5 + (distanceRatio - 0.2) * 0.3
-        saturation = 0.8
-        lightness = 0.6
-      } else {
-        // 외곽부 - 어두운 청록색/보라색
-        hue = 0.6 + (distanceRatio - 0.5) * 0.2
-        saturation = 0.7 - (distanceRatio - 0.5) * 0.4
-        lightness = 0.5 - (distanceRatio - 0.5) * 0.6
-      }
+      // 색상 (모두 흰색)
+      const color = new THREE.Color(1, 1, 1) // 순수한 흰색
 
       // 나선팔 중심으로부터의 거리에 따른 밝기 감소
       const armDistanceFactor = Math.exp(-Math.abs(angularOffset) * 1.5)
-      const adjustedLightness = lightness * (0.5 + armDistanceFactor * 0.5)
-
-      const color = new THREE.Color().setHSL(hue, saturation, adjustedLightness)
 
       // 크기 (나선 중심에서 크고, 멀어질수록 작게)
       let size
@@ -246,6 +228,39 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
   )
 }
 
+// 시간에 따라 블랙홀을 표시
+function BlackHoleSystem() {
+  const [showBlackHole, setShowBlackHole] = useState(false)
+
+  useFrame((state) => {
+    const elapsed = state.clock.elapsedTime
+    // 6초 이후(은하 형성 완료 후)에만 블랙홀 표시
+    if (elapsed > 6 && !showBlackHole) {
+      setShowBlackHole(true)
+    } else if (elapsed <= 6 && showBlackHole) {
+      setShowBlackHole(false)
+    }
+  })
+
+  if (!showBlackHole) return null
+
+  return (
+    <>
+      {/* 블랙홀 (중심의 작은 검은 구체) */}
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[0.01, 32, 32]} />
+        <meshStandardMaterial
+          color={0x000000}
+          emissive={0x000000}
+          emissiveIntensity={0}
+          metalness={1}
+          roughness={0}
+        />
+      </mesh>
+    </>
+  )
+}
+
 function Scene({ particleCount }: { particleCount: number }) {
   return (
     <>
@@ -262,16 +277,8 @@ function Scene({ particleCount }: { particleCount: number }) {
 
       <BigBangGalaxy particleCount={particleCount} />
 
-      {/* 중심 밝은 코어 */}
-      <mesh position={[0, 0, 0]}>
-        <sphereGeometry args={[0.3, 32, 32]} />
-        <meshStandardMaterial
-          color={0xffffff}
-          emissive={0xffffff}
-          emissiveIntensity={5}
-          toneMapped={false}
-        />
-      </mesh>
+      {/* 은하 형성 후에만 블랙홀과 강착원반 표시 */}
+      <BlackHoleSystem />
 
       <EffectComposer>
         <Bloom

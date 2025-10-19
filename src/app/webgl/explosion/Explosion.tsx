@@ -602,11 +602,13 @@ function BigBangGalaxy({
     }
 
     // material의 emissive 색상을 흰색으로 설정하고 강도 조정
-    if (particlesRef.current.material) {
+    if (particlesRef.current && particlesRef.current.material) {
       const material = particlesRef.current
         .material as THREE.MeshStandardMaterial
-      material.emissive.setHex(0xffffff)
-      material.emissiveIntensity = 4.0
+      if (material && material.emissive) {
+        material.emissive.setHex(0xffffff)
+        material.emissiveIntensity = 4.0
+      }
     }
   })
 
@@ -621,10 +623,7 @@ function BigBangGalaxy({
   }, [particleData])
 
   return (
-    <instancedMesh
-      ref={particlesRef}
-      args={[undefined, undefined, particleCount]}
-    >
+    <instancedMesh ref={particlesRef} args={[null, null, particleCount]}>
       <sphereGeometry args={[0.03, 8, 8]} />
       <meshStandardMaterial
         vertexColors
@@ -753,6 +752,197 @@ function AccretionDisk() {
   )
 }
 
+// 별 배경 컴포넌트 (수동으로 별들을 생성)
+function StarBackground({ controlledTime }: { controlledTime?: number }) {
+  const [showBackground, setShowBackground] = useState(false)
+  const starsRef = useRef<THREE.InstancedMesh>(null)
+  const starCount = 3000 // 배경 별 개수 (더 많이)
+
+  // 별 데이터 생성
+  const starData = useMemo(() => {
+    const data = []
+
+    for (let i = 0; i < starCount; i++) {
+      // 구형 좌표로 별 위치 생성 (카메라 주변에 분포)
+      const radius = 30 + Math.random() * 120 // 30-150 범위 (더 가깝게)
+      const theta = Math.random() * Math.PI * 2 // 0-2π
+      const phi = Math.acos(2 * Math.random() - 1) // 0-π
+
+      const x = radius * Math.sin(phi) * Math.cos(theta)
+      const y = radius * Math.sin(phi) * Math.sin(theta)
+      const z = radius * Math.cos(phi)
+
+      // 별 크기 (더 크게)
+      const size = Math.random() * 0.1 + 0.02 // 0.02-0.12 (훨씬 크게)
+
+      // 별 색상 (실제 별의 색상 분포를 반영한 다양한 색상)
+      const starColors = [
+        // O형 별 (파란색 거성) - 매우 뜨거운 별
+        new THREE.Color(0.6, 0.8, 1.0), // 밝은 파랑
+        new THREE.Color(0.5, 0.7, 1.0), // 파랑
+        new THREE.Color(0.4, 0.6, 1.0), // 진한 파랑
+
+        // B형 별 (청백색) - 뜨거운 별
+        new THREE.Color(0.8, 0.9, 1.0), // 청백색
+        new THREE.Color(0.7, 0.8, 1.0), // 연한 청백색
+        new THREE.Color(0.6, 0.7, 1.0), // 청백색
+
+        // A형 별 (흰색) - 중간 온도
+        new THREE.Color(1.0, 1.0, 1.0), // 순수 흰색
+        new THREE.Color(0.95, 0.95, 1.0), // 약간 파란 흰색
+        new THREE.Color(1.0, 0.98, 0.95), // 약간 노란 흰색
+
+        // F형 별 (황백색) - 중간 온도
+        new THREE.Color(1.0, 1.0, 0.9), // 황백색
+        new THREE.Color(1.0, 0.95, 0.8), // 연한 황백색
+        new THREE.Color(1.0, 0.9, 0.7), // 황백색
+
+        // G형 별 (노랑) - 우리 태양
+        new THREE.Color(1.0, 1.0, 0.8), // 밝은 노랑
+        new THREE.Color(1.0, 0.95, 0.6), // 노랑
+        new THREE.Color(1.0, 0.9, 0.5), // 진한 노랑
+
+        // K형 별 (주황) - 차가운 별
+        new THREE.Color(1.0, 0.8, 0.4), // 밝은 주황
+        new THREE.Color(1.0, 0.7, 0.3), // 주황
+        new THREE.Color(1.0, 0.6, 0.2), // 진한 주황
+
+        // M형 별 (빨강) - 적색 거성
+        new THREE.Color(1.0, 0.6, 0.4), // 밝은 빨강
+        new THREE.Color(1.0, 0.5, 0.3), // 빨강
+        new THREE.Color(0.9, 0.4, 0.2), // 진한 빨강
+
+        // 특별한 별들
+        new THREE.Color(1.0, 0.8, 1.0), // 연한 보라색 (특별한 별)
+        new THREE.Color(0.8, 1.0, 0.8), // 연한 초록색 (특별한 별)
+        new THREE.Color(1.0, 0.9, 0.6), // 황금색 (특별한 별)
+        new THREE.Color(0.7, 0.9, 1.0), // 하늘색 (특별한 별)
+      ]
+
+      // 실제 별 분포를 반영한 가중치 (M형 별이 가장 많음)
+      const colorWeights = [
+        0.01,
+        0.01,
+        0.01, // O형 (1%)
+        0.05,
+        0.05,
+        0.05, // B형 (5%)
+        0.1,
+        0.1,
+        0.1, // A형 (10%)
+        0.15,
+        0.15,
+        0.15, // F형 (15%)
+        0.2,
+        0.2,
+        0.2, // G형 (20%)
+        0.25,
+        0.25,
+        0.25, // K형 (25%)
+        0.3,
+        0.3,
+        0.3, // M형 (30%)
+        0.02,
+        0.02,
+        0.02,
+        0.02, // 특별한 별들 (8%)
+      ]
+
+      // 가중치에 따른 색상 선택
+      const random = Math.random()
+      let cumulativeWeight = 0
+      let selectedColorIndex = 0
+
+      for (let j = 0; j < colorWeights.length; j++) {
+        cumulativeWeight += colorWeights[j]
+        if (random <= cumulativeWeight) {
+          selectedColorIndex = j
+          break
+        }
+      }
+
+      const color = starColors[selectedColorIndex]
+
+      // 별 밝기 (더 밝게)
+      const brightness = Math.random() * 0.6 + 0.8 // 0.8-1.4 (더 밝게)
+
+      data.push({
+        position: new THREE.Vector3(x, y, z),
+        size,
+        color,
+        brightness,
+        twinkleSpeed: Math.random() * 0.02 + 0.01, // 반짝임 속도
+        twinklePhase: Math.random() * Math.PI * 2, // 반짝임 위상
+      })
+    }
+
+    return data
+  }, [starCount])
+
+  useFrame((state) => {
+    const elapsed =
+      controlledTime !== undefined ? controlledTime : state.clock.elapsedTime
+
+    // 13초 이후(은하 형성 시작)에 배경이 나타나기 시작
+    if (elapsed > 13 && !showBackground) {
+      setShowBackground(true)
+    } else if (elapsed <= 13 && showBackground) {
+      setShowBackground(false)
+    }
+
+    if (!starsRef.current || !showBackground) return
+
+    // 별들 업데이트 (반짝임 효과)
+    for (let i = 0; i < starCount; i++) {
+      const data = starData[i]
+      const matrix = new THREE.Matrix4()
+
+      // 반짝임 효과 (더 강하게)
+      const twinkle =
+        Math.sin(
+          state.clock.elapsedTime * data.twinkleSpeed + data.twinklePhase
+        ) *
+          0.5 +
+        0.5
+      const currentBrightness = data.brightness * (0.5 + twinkle * 0.5)
+
+      // 위치 설정
+      matrix.setPosition(data.position)
+
+      // 크기 설정 (반짝임에 따라 더 크게 변화)
+      const scale = data.size * (0.5 + twinkle * 1.0)
+      matrix.scale(new THREE.Vector3(scale, scale, scale))
+
+      starsRef.current.setMatrixAt(i, matrix)
+
+      // 색상 설정 (밝기 적용)
+      const finalColor = data.color.clone().multiplyScalar(currentBrightness)
+      starsRef.current.setColorAt(i, finalColor)
+    }
+
+    starsRef.current.instanceMatrix.needsUpdate = true
+    if (starsRef.current.instanceColor) {
+      starsRef.current.instanceColor.needsUpdate = true
+    }
+  })
+
+  if (!showBackground) return null
+
+  return (
+    <instancedMesh ref={starsRef} args={[null, null, starCount]}>
+      <sphereGeometry args={[1, 8, 8]} />
+      <meshStandardMaterial
+        color={0xffffff}
+        toneMapped={false}
+        transparent
+        opacity={1.0}
+        emissive={0xffffff}
+        emissiveIntensity={0.5}
+      />
+    </instancedMesh>
+  )
+}
+
 // 시간에 따라 블랙홀과 강착원반을 표시
 function BlackHoleSystem() {
   const [showBlackHole, setShowBlackHole] = useState(false)
@@ -859,6 +1049,9 @@ function Scene({
         particleCount={particleCount}
         controlledTime={controlledTime}
       />
+
+      {/* 별 배경 (은하 형성 시작 후 나타남) */}
+      <StarBackground controlledTime={controlledTime} />
 
       {/* 은하 형성 후에만 블랙홀과 강착원반 표시 */}
       <BlackHoleSystem />

@@ -1,13 +1,50 @@
 'use client'
 
-import { OrbitControls } from '@react-three/drei'
+import { Html, OrbitControls } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 
+// 타임라인 컨트롤 컴포넌트
+function TimelineControl({
+  currentTime,
+  duration,
+  isPlaying,
+  onTimeChange,
+  onPlayPause,
+  onReset,
+}: {
+  currentTime: number
+  duration: number
+  isPlaying: boolean
+  onTimeChange: (time: number) => void
+  onPlayPause: () => void
+  onReset: () => void
+}) {
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  const getPhaseLabel = (time: number) => {
+    if (time < 3) return '빅뱅 폭발 단계'
+    if (time < 15) return '은하 형성 중'
+    return '은하 회전 단계'
+  }
+
+  return null // 이제 ControlPanel에 통합됨
+}
+
 // 빅뱅 -> 은하수 효과
-function BigBangGalaxy({ particleCount }: { particleCount: number }) {
+function BigBangGalaxy({
+  particleCount,
+  controlledTime,
+}: {
+  particleCount: number
+  controlledTime?: number
+}) {
   const particlesRef = useRef<THREE.InstancedMesh>(null)
   const startTimeRef = useRef<number>(0)
   const initializedRef = useRef(false)
@@ -35,7 +72,7 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
       // 은하 외곽에 있을 파티클 → 빅뱅 때 빠르게
       const theta = Math.random() * Math.PI * 2
       const phi = Math.acos(2 * Math.random() - 1)
-      const speed = 0.3 + distanceRatio * 1.2 // distanceRatio에 비례 (0.3 ~ 1.5)
+      const speed = 5.0 + distanceRatio * 10.0 // distanceRatio에 비례 (5.0 ~ 15.0) - 아주 멀리 퍼짐
 
       const initialVelocity = new THREE.Vector3(
         Math.sin(phi) * Math.cos(theta) * speed,
@@ -68,11 +105,21 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
       let angularOffset, radialSpread
       let finalAngle // 최종 각도
 
-      if (distanceRatio < 0.15) {
-        // 중심부 (bulge)는 완전한 구형 - 나선팔 각도 무시하고 360도 전체에 분포
-        finalAngle = Math.random() * Math.PI * 2 // 0-360도 랜덤
-        angularOffset = 0 // 중심부에서는 나선 각도 무시
-        radialSpread = Math.abs(gaussianRandom()) * 0.5 * (1 + distanceRatio)
+      if (distanceRatio < 0.25) {
+        // 중심부 (bulge)는 완전한 구형 - 3D 구형 분포
+        // 균일한 구형 분포
+        const theta = Math.random() * Math.PI * 2 // 방위각 (0-360도)
+        const phi = Math.acos(2 * Math.random() - 1) // 고도각 (균일 분포)
+        const r = Math.pow(Math.random(), 1 / 3) * galaxyRadius * 2.0 // 구형 내부 균일 분포
+
+        // 구형 좌표를 직교 좌표로 변환
+        const x = r * Math.sin(phi) * Math.cos(theta)
+        const z = r * Math.sin(phi) * Math.sin(theta)
+
+        // galaxyRadius는 나중에 finalAngle로 회전되므로, 여기서는 r 기준으로 계산
+        finalAngle = theta
+        angularOffset = 0
+        radialSpread = Math.sqrt(x * x + z * z) - galaxyRadius // XZ 평면에서의 거리 오프셋
       } else {
         // 나선팔: 동그란 단면으로 외곽으로 갈수록 자연스럽게 얇아짐
         // 외곽으로 갈수록 빠르게 얇아지는 비율 (지수 함수)
@@ -116,15 +163,13 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
       // Y축 위치 계산: 나선팔은 동그란 원통처럼
       let yPosition
 
-      if (distanceRatio < 0.15) {
-        // 중심부 (bulge)는 완전한 구형 - 구의 반지름 범위 내에서 랜덤 분포
-        // 구형 분포: x² + y² + z² <= r²
-        // galaxyRadius가 이미 중심으로부터의 XZ 평면 거리이므로,
-        // Y축은 남은 구의 범위 내에서 분포
-        const maxY = Math.sqrt(
-          Math.max(0, galaxyRadius * galaxyRadius - radialSpread * radialSpread)
-        )
-        yPosition = (Math.random() - 0.5) * 2 * maxY // -maxY ~ +maxY
+      if (distanceRatio < 0.25) {
+        // 중심부 (bulge)는 완전한 구형 - phi 각도로 Y축 계산
+        const theta = Math.random() * Math.PI * 2
+        const phi = Math.acos(2 * Math.random() - 1) // 균일한 구형 분포
+        const r = Math.pow(Math.random(), 1 / 3) * galaxyRadius * 2.0
+
+        yPosition = r * Math.cos(phi) // 구형 Y 좌표
       } else {
         // 나선팔: 동그란 원통 - Y축도 흩뿌리기
         const tapering = Math.exp(-distanceRatio * 2.5)
@@ -207,7 +252,11 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
       initializedRef.current = true
     }
 
-    const elapsed = state.clock.elapsedTime - startTimeRef.current
+    // controlledTime이 있으면 그것을 사용, 없으면 자동 진행
+    const elapsed =
+      controlledTime !== undefined
+        ? controlledTime
+        : state.clock.elapsedTime - startTimeRef.current
     const time = state.clock.elapsedTime
 
     // 단계별 전환
@@ -289,28 +338,38 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
       let finalColor: THREE.Color
 
       if (elapsed < 3) {
-        // 빅뱅 단계 (0-3초): 극초고온 색상
+        // 빅뱅 단계 (0-3초): 극초고온 색상 (더 강렬한 파란-흰색 글로우)
         // 중심부에서 외곽으로 온도 그라데이션
-        const explosionTemp = 1 - data.distanceRatio * 0.7
+        const explosionTemp = 1 - data.distanceRatio * 0.5
+        const explosionProgress = explosionPhase // 0-1
 
-        if (explosionTemp > 0.8) {
-          // 극초고온 (>10^10 K): 청백색-흰색
-          const hue = 0.55 + (1 - explosionTemp) * 0.1 // 0.55-0.65 (청록-파랑)
+        if (explosionTemp > 0.85) {
+          // 극초고온 (>10^11 K): 강렬한 청백색 글로우
+          const hue = 0.58 // 순수한 파란색
+          const saturation = 0.6 + explosionTemp * 0.4 // 0.6-1.0 (매우 포화됨)
+          const lightness = 1.0 // 최대 밝기
+          finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
+        } else if (explosionTemp > 0.7) {
+          // 초고온 (10^10-10^11 K): 밝은 청백색
+          const hue = 0.55 + (1 - explosionTemp) * 0.05 // 0.55-0.58 (파란색)
+          const saturation = 0.5 + explosionTemp * 0.3 // 0.5-0.8
+          const lightness = 0.98 + explosionTemp * 0.02 // 0.98-1.0
+          finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
+        } else if (explosionTemp > 0.5) {
+          // 고온 (10^9-10^10 K): 흰색-청백색
+          const hue = 0.52 + (1 - explosionTemp) * 0.1 // 0.52-0.6 (연한 파랑)
           const saturation = 0.3 + explosionTemp * 0.3 // 0.3-0.6
-          const lightness = 0.9 + explosionTemp * 0.1 // 0.9-1.0 (매우 밝음)
+          const lightness = 0.95 + explosionTemp * 0.05 // 0.95-1.0
           finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
-        } else if (explosionTemp > 0.6) {
-          // 초고온 (10^9-10^10 K): 흰색
+        } else if (explosionTemp > 0.3) {
+          // 중온 (10^8-10^9 K): 흰색
           finalColor = new THREE.Color(1, 1, 1)
-        } else if (explosionTemp > 0.4) {
-          // 고온 (10^8-10^9 K): 청백색
-          const hue = 0.6
-          const saturation = 0.2
-          const lightness = 0.95
-          finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
         } else {
-          // 온도 감소: 흰색으로 전환
-          finalColor = new THREE.Color(explosionTemp * 2, explosionTemp * 2, 1)
+          // 온도 감소: 흰색-청백색 전환
+          const hue = 0.55
+          const saturation = 0.2 * explosionTemp
+          const lightness = 0.9 + explosionTemp * 0.1
+          finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
         }
       } else if (galaxyFormationPhase < 0.8) {
         // 은하 형성 중 (3-12초): 온도 하강
@@ -326,11 +385,11 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
         // 은하 형성 완료 후 (12초+): 온도별 색상
         if (data.distanceRatio < 0.15) {
           // 중심부 (0-15%): 블랙홀 강착원반 - 극고온
-          // 온도: 10^7-10^8 K → 흰색-청백색-파랑
+          // 온도: 10^7-10^8 K → 흰색-청백색-파랑 (밝기 감소)
           const centerPhase = data.distanceRatio / 0.15
           const hue = 0.55 + centerPhase * 0.05 // 0.55-0.60 (청록-파랑)
           const saturation = 0.7 - centerPhase * 0.2 // 0.7-0.5
-          const lightness = 0.7 + centerPhase * 0.2 // 0.7-0.9
+          const lightness = 0.5 + centerPhase * 0.3 // 0.5-0.8 (밝기 낮춤)
           finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
         } else if (data.distanceRatio < 0.3) {
           // 내부 (15-30%): 고온 영역 - 흰색
@@ -542,12 +601,54 @@ function BlackHoleSystem() {
   )
 }
 
-function Scene({ particleCount }: { particleCount: number }) {
+function Scene({
+  particleCount,
+  controlledTime,
+  currentTime,
+  duration,
+  isPlaying,
+  onParticleCountChange,
+  onTimeChange,
+  onPlayPause,
+  onReset,
+  getPhaseLabel,
+  formatTime,
+}: {
+  particleCount: number
+  controlledTime?: number
+  currentTime: number
+  duration: number
+  isPlaying: boolean
+  onParticleCountChange: (count: number) => void
+  onTimeChange: (time: number) => void
+  onPlayPause: () => void
+  onReset: () => void
+  getPhaseLabel: (time: number) => string
+  formatTime: (seconds: number) => string
+}) {
   return (
     <>
       <color attach="background" args={['#000005']} />
       <ambientLight intensity={0.3} />
       <pointLight position={[0, 0, 0]} intensity={2} decay={2} />
+
+      {/* Canvas 내부 HTML 오버레이 */}
+      <Html fullscreen>
+        <div className="absolute top-5 left-5">
+          <ControlPanel
+            particleCount={particleCount}
+            onParticleCountChange={onParticleCountChange}
+            currentTime={currentTime}
+            duration={duration}
+            isPlaying={isPlaying}
+            onTimeChange={onTimeChange}
+            onPlayPause={onPlayPause}
+            onReset={onReset}
+            getPhaseLabel={getPhaseLabel}
+            formatTime={formatTime}
+          />
+        </div>
+      </Html>
 
       {/* 동적 카메라 거리 제어 */}
       <DynamicCamera />
@@ -560,7 +661,10 @@ function Scene({ particleCount }: { particleCount: number }) {
         maxDistance={20}
       />
 
-      <BigBangGalaxy particleCount={particleCount} />
+      <BigBangGalaxy
+        particleCount={particleCount}
+        controlledTime={controlledTime}
+      />
 
       {/* 은하 형성 후에만 블랙홀과 강착원반 표시 */}
       <BlackHoleSystem />
@@ -578,60 +682,201 @@ function Scene({ particleCount }: { particleCount: number }) {
   )
 }
 
-// 컨트롤 패널 컴포넌트
+// 통합 컨트롤 패널
 function ControlPanel({
   particleCount,
   onParticleCountChange,
+  currentTime,
+  duration,
+  isPlaying,
+  onTimeChange,
+  onPlayPause,
+  onReset,
+  getPhaseLabel,
+  formatTime,
 }: {
   particleCount: number
   onParticleCountChange: (count: number) => void
+  currentTime: number
+  duration: number
+  isPlaying: boolean
+  onTimeChange: (time: number) => void
+  onPlayPause: () => void
+  onReset: () => void
+  getPhaseLabel: (time: number) => string
+  formatTime: (seconds: number) => string
 }) {
-  return (
-    <div className="absolute top-4 left-4 z-10 bg-black/70 text-white p-4 rounded-lg backdrop-blur-sm">
-      <h3 className="text-lg font-bold mb-3">🌌 은하 설정</h3>
+  const [isMinimized, setIsMinimized] = useState(false)
 
-      <div className="space-y-3">
-        <div>
-          <label className="block text-sm mb-2">
-            파티클 개수:{' '}
-            <span className="font-bold text-cyan-400">
+  return (
+    <div className="bg-black/80 backdrop-blur-xl rounded-2xl text-white border border-white/10 shadow-2xl transition-all duration-300 w-[280px]">
+      {/* 헤더 - 항상 표시 */}
+      <div
+        className={`flex items-center justify-between p-4 ${
+          !isMinimized ? 'border-b border-white/10' : ''
+        }`}
+      >
+        <div className="text-sm font-semibold uppercase tracking-wide">
+          Controls
+        </div>
+        <button
+          onClick={() => setIsMinimized(!isMinimized)}
+          className="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg transition-all"
+        >
+          {isMinimized ? '▼' : '▲'}
+        </button>
+      </div>
+
+      {/* 컨텐츠 - 최소화 시 숨김 */}
+      {!isMinimized && (
+        <div className="p-5">
+          {/* 파티클 설정 */}
+          <div className="mb-6 pb-6 border-b border-white/10">
+            <div className="text-xs text-white/50 uppercase tracking-wide mb-2">
+              Particles
+            </div>
+            <div className="text-3xl font-mono font-bold mb-3">
               {particleCount.toLocaleString()}
-            </span>
-          </label>
-          <input
-            type="range"
-            min="10000"
-            max="200000"
-            step="10000"
-            value={particleCount}
-            onChange={(e) => onParticleCountChange(Number(e.target.value))}
-            className="w-64 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-          />
-          <div className="flex justify-between text-xs text-gray-400 mt-1">
-            <span>10,000</span>
-            <span>200,000</span>
+            </div>
+            <input
+              type="range"
+              min="10000"
+              max="200000"
+              step="10000"
+              value={particleCount}
+              onChange={(e) => onParticleCountChange(Number(e.target.value))}
+              className="w-full h-2 bg-white/10 rounded-full outline-none cursor-pointer appearance-none mb-2"
+            />
+            <div className="flex justify-between text-xs text-white/40 font-mono">
+              <span>10K</span>
+              <span>200K</span>
+            </div>
+          </div>
+
+          {/* 타임라인 */}
+          <div className="mb-4">
+            <div className="text-xs text-white/50 uppercase tracking-wide mb-2">
+              Timeline
+            </div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-2xl font-mono font-bold">
+                {formatTime(currentTime)}
+              </div>
+              <div className="text-xs text-white/40">
+                {getPhaseLabel(currentTime)}
+              </div>
+            </div>
+            <div className="relative px-1.5 mb-3">
+              <div
+                className="relative h-2 bg-white/10 rounded-full cursor-pointer"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  const x = e.clientX - rect.left
+                  const percentage = Math.max(0, Math.min(1, x / rect.width))
+                  onTimeChange(percentage * duration)
+                }}
+              >
+                <div
+                  className="absolute left-0 top-0 h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full transition-all duration-100"
+                  style={{
+                    width: `${Math.min((currentTime / duration) * 100, 100)}%`,
+                  }}
+                />
+                <div
+                  className="absolute top-1/2 w-3 h-3 bg-white rounded-full shadow-lg transition-all duration-100"
+                  style={{
+                    left: `${Math.min((currentTime / duration) * 100, 100)}%`,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={onPlayPause}
+                className="flex-1 py-2 px-3 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-all"
+              >
+                {isPlaying ? '⏸' : '▶'}
+              </button>
+              <button
+                onClick={onReset}
+                className="flex-1 py-2 px-3 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-all"
+              >
+                ↻
+              </button>
+            </div>
           </div>
         </div>
-
-        <div className="text-xs text-gray-400 mt-4 space-y-1">
-          <p>💡 적은 개수: 빠른 성능</p>
-          <p>✨ 많은 개수: 정교한 디테일</p>
-        </div>
-      </div>
+      )}
     </div>
   )
 }
 
 export default function Explosion() {
   const [particleCount, setParticleCount] = useState(100000)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(true)
+  const [duration] = useState(30) // 30초 타임라인
+  const animationRef = useRef<number | null>(null)
+  const lastTimeRef = useRef<number>(Date.now())
+
+  // 자동 재생
+  useEffect(() => {
+    if (isPlaying) {
+      const animate = () => {
+        const now = Date.now()
+        const deltaTime = (now - lastTimeRef.current) / 1000 // 초 단위
+        lastTimeRef.current = now
+
+        setCurrentTime((prevTime) => prevTime + deltaTime)
+
+        animationRef.current = requestAnimationFrame(animate)
+      }
+
+      animationRef.current = requestAnimationFrame(animate)
+
+      return () => {
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current)
+        }
+      }
+    } else {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
+  }, [isPlaying, duration])
+
+  const handlePlayPause = () => {
+    setIsPlaying(!isPlaying)
+    lastTimeRef.current = Date.now()
+  }
+
+  const handleReset = () => {
+    setCurrentTime(0)
+    setIsPlaying(false)
+    lastTimeRef.current = Date.now()
+  }
+
+  const handleTimeChange = (time: number) => {
+    setCurrentTime(time)
+    lastTimeRef.current = Date.now()
+  }
+
+  const getPhaseLabel = (time: number) => {
+    if (time < 3) return '빅뱅 폭발 단계'
+    if (time < 15) return '은하 형성 중'
+    return '은하 회전 단계'
+  }
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
 
   return (
     <div className="h-screen relative">
-      <ControlPanel
-        particleCount={particleCount}
-        onParticleCountChange={setParticleCount}
-      />
-
       <Canvas
         camera={{ position: [0, 8, 15], fov: 75 }}
         gl={{
@@ -639,7 +884,19 @@ export default function Explosion() {
         }}
         dpr={typeof window !== 'undefined' ? window.devicePixelRatio : 1}
       >
-        <Scene particleCount={particleCount} />
+        <Scene
+          particleCount={particleCount}
+          controlledTime={currentTime}
+          currentTime={currentTime}
+          duration={duration}
+          isPlaying={isPlaying}
+          onParticleCountChange={setParticleCount}
+          onTimeChange={handleTimeChange}
+          onPlayPause={handlePlayPause}
+          onReset={handleReset}
+          getPhaseLabel={getPhaseLabel}
+          formatTime={formatTime}
+        />
       </Canvas>
     </div>
   )

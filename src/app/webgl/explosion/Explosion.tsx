@@ -1,7 +1,7 @@
 'use client'
 
 import { OrbitControls } from '@react-three/drei'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -20,11 +20,12 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
       const spiralArm = Math.floor(Math.random() * 3)
       const baseArmAngle = (spiralArm * Math.PI * 2) / 3
 
-      // 은하 중심으로부터의 거리 (블랙홀 주변은 비워둠)
-      const minRadius = 0.05 // 블랙홀 바로 밖부터 시작
+      // 은하 중심으로부터의 거리 (블랙홀부터 바로 시작)
+      // 중심부에 파티클 밀도 집중 (지수 1.5 사용)
+      const minRadius = -0.2 // 블랙홀부터 시작
       const maxRadius = 12
       const galaxyRadius =
-        minRadius + Math.pow(Math.random(), 0.5) * (maxRadius - minRadius)
+        minRadius + Math.pow(Math.random(), 1) * (maxRadius - minRadius)
 
       // 거리 비율 (0: 블랙홀 바로 밖, 1: 외곽)
       const distanceRatio = (galaxyRadius - minRadius) / (maxRadius - minRadius)
@@ -66,10 +67,14 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
       const radialSpread =
         Math.abs(gaussianRandom()) * 0.5 * (1 + distanceRatio)
 
+      // 원반 두께 계산 (중심부 두껍고 외곽 얇게)
+      // distanceRatio가 작을수록(중심) 두껍고, 클수록(외곽) 얇음
+      const diskThickness = 0.3 * (1 - distanceRatio * 0.85) // 중심 0.3 → 외곽 0.045
+
       // 최종 은하 위치
       const galaxyPosition = new THREE.Vector3(
         Math.cos(spiralAngle) * (galaxyRadius + radialSpread),
-        (Math.random() - 0.5) * 0.15 * galaxyRadius, // 얇은 원반
+        (Math.random() - 0.5) * diskThickness * galaxyRadius, // 거리에 따라 두께 변화
         Math.sin(spiralAngle) * (galaxyRadius + radialSpread)
       )
 
@@ -196,20 +201,84 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
 
       particlesRef.current.setMatrixAt(i, matrix)
 
-      // 색상 설정 (은하 형성 후 외곽부와 나선팔에서 먼 곳은 더 어둡게)
-      let brightnessMultiplier = 1
+      // 색상 설정 - 온도 기반 색상
+      let finalColor: THREE.Color
 
-      if (galaxyFormationPhase > 0.8) {
-        // 외곽부 감소
-        brightnessMultiplier *= 1 - data.distanceRatio * 0.4
-        // 나선팔에서 멀수록 감소
-        brightnessMultiplier *= 0.6 + data.armDistanceFactor * 0.4
+      if (elapsed < 3) {
+        // 빅뱅 단계 (0-3초): 극초고온 색상
+        // 중심부에서 외곽으로 온도 그라데이션
+        const explosionTemp = 1 - data.distanceRatio * 0.7
+
+        if (explosionTemp > 0.8) {
+          // 극초고온 (>10^10 K): 청백색-흰색
+          const hue = 0.55 + (1 - explosionTemp) * 0.1 // 0.55-0.65 (청록-파랑)
+          const saturation = 0.3 + explosionTemp * 0.3 // 0.3-0.6
+          const lightness = 0.9 + explosionTemp * 0.1 // 0.9-1.0 (매우 밝음)
+          finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
+        } else if (explosionTemp > 0.6) {
+          // 초고온 (10^9-10^10 K): 흰색
+          finalColor = new THREE.Color(1, 1, 1)
+        } else if (explosionTemp > 0.4) {
+          // 고온 (10^8-10^9 K): 청백색
+          const hue = 0.6
+          const saturation = 0.2
+          const lightness = 0.95
+          finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
+        } else {
+          // 온도 감소: 흰색으로 전환
+          finalColor = new THREE.Color(explosionTemp * 2, explosionTemp * 2, 1)
+        }
+      } else if (galaxyFormationPhase < 0.8) {
+        // 은하 형성 중 (3-12초): 온도 하강
+        // 뜨거운 흰색에서 일반 흰색으로
+        const coolingPhase = galaxyFormationPhase
+        const temp = 1 - data.distanceRatio * 0.3
+
+        const hue = 0.6 * (1 - coolingPhase) // 파란색 → 흰색
+        const saturation = 0.1 * (1 - coolingPhase)
+        const lightness = 0.9 + temp * 0.1
+        finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
+      } else {
+        // 은하 형성 완료 후 (12초+): 온도별 색상
+        if (data.distanceRatio < 0.15) {
+          // 중심부 (0-15%): 블랙홀 강착원반 - 극고온
+          // 온도: 10^7-10^8 K → 흰색-청백색-파랑
+          const centerPhase = data.distanceRatio / 0.15
+          const hue = 0.55 + centerPhase * 0.05 // 0.55-0.60 (청록-파랑)
+          const saturation = 0.7 - centerPhase * 0.2 // 0.7-0.5
+          const lightness = 0.7 + centerPhase * 0.2 // 0.7-0.9
+          finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
+        } else if (data.distanceRatio < 0.3) {
+          // 내부 (15-30%): 고온 영역 - 흰색
+          // 온도: 10^6-10^7 K → 청백색-흰색
+          const transitionPhase = (data.distanceRatio - 0.15) / 0.15
+          const hotColor = new THREE.Color().setHSL(0.6, 0.5, 0.9)
+          const whiteColor = new THREE.Color(1, 1, 1)
+          finalColor = hotColor.clone().lerp(whiteColor, transitionPhase)
+        } else if (data.distanceRatio < 0.6) {
+          // 중간부 (30-60%): 온화 영역 - 노랑-주황
+          // 온도: 10^5-10^6 K → 흰색-노랑
+          const midPhase = (data.distanceRatio - 0.3) / 0.3
+          const hue = 0.15 * midPhase // 0-0.15 (빨강-주황-노랑)
+          const saturation = 0.3 + midPhase * 0.3 // 0.3-0.6
+          const lightness = 0.9 - midPhase * 0.2 // 0.9-0.7
+          finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
+        } else {
+          // 외곽부 (60%+): 저온 영역 - 빨강-어두운 빨강
+          // 온도: 10^3-10^5 K → 노랑-주황-빨강
+          const outerPhase = (data.distanceRatio - 0.6) / 0.4
+          const hue = 0.05 - outerPhase * 0.02 // 0.05-0.03 (주황-빨강)
+          const saturation = 0.6 + outerPhase * 0.2 // 0.6-0.8
+          const lightness = 0.5 - outerPhase * 0.3 // 0.5-0.2 (어두워짐)
+          finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
+        }
+
+        // 나선팔에서 멀수록 추가 감소
+        const armFactor = 0.6 + data.armDistanceFactor * 0.4
+        finalColor.multiplyScalar(armFactor)
       }
 
-      const adjustedColor = data.color
-        .clone()
-        .multiplyScalar(brightnessMultiplier)
-      particlesRef.current.setColorAt(i, adjustedColor)
+      particlesRef.current.setColorAt(i, finalColor)
     }
 
     particlesRef.current.instanceMatrix.needsUpdate = true
@@ -228,11 +297,52 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
         vertexColors
         color={0xffffff}
         emissive={0xffffff}
-        emissiveIntensity={3}
+        emissiveIntensity={2.5}
         toneMapped={false}
       />
     </instancedMesh>
   )
+}
+
+// 동적 카메라 거리 제어
+function DynamicCamera() {
+  const { camera } = useThree()
+  const userControlledRef = useRef(false)
+
+  useFrame((state) => {
+    // 사용자가 제어 중이면 자동 제어 중지
+    if (userControlledRef.current) return
+
+    const elapsed = state.clock.elapsedTime
+
+    let targetDistance = 7 // 기본값 (빅뱅 시작)
+
+    if (elapsed < 3) {
+      // 빅뱅 단계 (0-3초): 거리 7로 고정
+      targetDistance = 7
+    } else if (elapsed < 15) {
+      // 은하 형성 단계 (3-15초): 7에서 20으로 부드럽게 줌아웃
+      const transitionPhase = (elapsed - 3) / 12 // 0 ~ 1
+      targetDistance = 7 + transitionPhase * 13 // 7 → 20
+    } else {
+      // 은하 완성 후 (15초+): 거리 20으로 고정, 사용자 제어 허용
+      targetDistance = 20
+      userControlledRef.current = true
+    }
+
+    // 현재 카메라 거리 계산
+    const currentDistance = camera.position.length()
+
+    // 부드러운 전환 (lerp)
+    if (!userControlledRef.current) {
+      const newDistance =
+        currentDistance + (targetDistance - currentDistance) * 0.05
+      const direction = camera.position.clone().normalize()
+      camera.position.copy(direction.multiplyScalar(newDistance))
+    }
+  })
+
+  return null
 }
 
 // 시간에 따라 블랙홀을 표시
@@ -274,12 +384,16 @@ function Scene({ particleCount }: { particleCount: number }) {
       <color attach="background" args={['#000005']} />
       <ambientLight intensity={0.3} />
       <pointLight position={[0, 0, 0]} intensity={2} decay={2} />
+
+      {/* 동적 카메라 거리 제어 */}
+      <DynamicCamera />
+
       <OrbitControls
         enableDamping
         autoRotate
         autoRotateSpeed={0.5}
         minDistance={1}
-        maxDistance={5}
+        maxDistance={20}
       />
 
       <BigBangGalaxy particleCount={particleCount} />
@@ -290,7 +404,7 @@ function Scene({ particleCount }: { particleCount: number }) {
       <EffectComposer>
         <Bloom
           intensity={1.5}
-          radius={0.8}
+          radius={0.55}
           luminanceThreshold={0.2}
           luminanceSmoothing={0.4}
           mipmapBlur

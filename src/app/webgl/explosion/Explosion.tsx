@@ -41,9 +41,11 @@ function TimelineControl({
 function BigBangGalaxy({
   particleCount,
   controlledTime,
+  coreBrightness,
 }: {
   particleCount: number
   controlledTime?: number
+  coreBrightness: number
 }) {
   const particlesRef = useRef<THREE.InstancedMesh>(null)
   const startTimeRef = useRef<number>(0)
@@ -59,7 +61,7 @@ function BigBangGalaxy({
 
       // 은하 중심으로부터의 거리
       // 실제 은하 구조: 중심 bulge(구형) + 나선 원반
-      const minRadius = 0.05 // 블랙홀 바로 외곽부터 시작
+      const minRadius = 0 // 나선팔이 중심부터 시작 (블랙홀과 밀착)
       const maxRadius = 20
       const galaxyRadius =
         minRadius + Math.pow(Math.random(), 3) * (maxRadius - minRadius) // 지수 3으로 중심 더 집중
@@ -80,17 +82,17 @@ function BigBangGalaxy({
         Math.cos(phi) * speed
       )
 
-      // 나선 각도 (거리에 비례) - M51은 좀 더 타이트한 나선
-      const spiralTightness = 0.6 // M51 스타일의 나선 (0.5 → 0.6)
+      // 나선 각도 (거리에 비례) - 나선팔 간격을 넓히기 위해 완화
+      const spiralTightness = 1.0 // 나선팔 간격을 넓히기 위해 완화 (2.0 → 1.0)
 
-      // X축 방향 흩뿌리기: 나선을 따라 앞뒤로 흩어짐
+      // X축 방향 흩뿌리기: 나선을 따라 앞뒤로 흩어짐 (거리에 따라 조절)
       const spiralScatter =
-        distanceRatio > 0.15
-          ? (Math.random() - 0.5) * 0.8 * (1 + distanceRatio) // 나선팔: 앞뒤로 흩어짐
-          : 0 // 중심부 bulge는 흩뿌리지 않음
+        (Math.random() - 0.5) * 0.3 * (0.5 + distanceRatio * 1.5)
 
+      // 중심부에서도 나선팔이 명확하게 보이도록 최소 반지름 보장
+      const effectiveRadius = Math.max(galaxyRadius, 1.0) // 최소 1.0 보장
       const spiralCenterAngle =
-        baseArmAngle + (galaxyRadius + spiralScatter) * spiralTightness
+        baseArmAngle + (effectiveRadius + spiralScatter) * spiralTightness
 
       // 나선팔로부터의 각도 오프셋 (가우시안 분포로 나선 주변에 집중)
       const gaussianRandom = () => {
@@ -104,91 +106,97 @@ function BigBangGalaxy({
       // 나선팔: 동그란 단면, 외곽으로 갈수록 얇아짐
       let angularOffset, radialSpread
       let finalAngle // 최종 각도
+      let yPosition // Y축 위치
 
       if (distanceRatio < 0.25) {
-        // 중심부 (bulge)는 완전한 구형 - 3D 구형 분포
-        // 균일한 구형 분포
+        // 중심부 (0-25%): 완전한 구형 팽대부 - 3D 구형 분포
         const theta = Math.random() * Math.PI * 2 // 방위각 (0-360도)
         const phi = Math.acos(2 * Math.random() - 1) // 고도각 (균일 분포)
-        const r = Math.pow(Math.random(), 1 / 3) * galaxyRadius * 2.0 // 구형 내부 균일 분포
+        const r = Math.pow(Math.random(), 1 / 3) * galaxyRadius * 0.8 // 구형 내부 균일 분포
 
-        // 구형 좌표를 직교 좌표로 변환
+        // 구형 좌표를 직교 좌표로 변환 (완전한 3D 구형)
         const x = r * Math.sin(phi) * Math.cos(theta)
+        const y = r * Math.cos(phi) // Y축도 같은 구형 좌표계에서 계산
         const z = r * Math.sin(phi) * Math.sin(theta)
 
-        // galaxyRadius는 나중에 finalAngle로 회전되므로, 여기서는 r 기준으로 계산
+        // 구형 팽대부에서는 나선팔 각도를 무시하고 완전히 구형으로
         finalAngle = theta
         angularOffset = 0
-        radialSpread = Math.sqrt(x * x + z * z) - galaxyRadius // XZ 평면에서의 거리 오프셋
+        radialSpread = Math.sqrt(x * x + z * z) - galaxyRadius
+
+        // Y축 위치도 구형 좌표계에서 계산된 값 사용
+        yPosition = y
       } else {
-        // 나선팔: 동그란 단면으로 외곽으로 갈수록 자연스럽게 얇아짐
-        // 외곽으로 갈수록 빠르게 얇아지는 비율 (지수 함수)
-        const tapering = Math.exp(-distanceRatio * 2.5) // 지수 감소로 자연스럽게 가늘어짐
+        // 나선팔 (25%+): 중심부에서 뻗어나가는 원통형 나선팔
+        // 중심부에서 가장 두껍고 외곽으로 갈수록 얇아짐
+        const armStartRadius = 0.5 // 중심부에서의 나선팔 시작 반지름 (가장 두껍게)
+        const armEndRadius = 0.03 // 외곽에서의 나선팔 끝 반지름 (가장 얇게)
 
-        // 나선팔 기본 반지름 (외곽으로 갈수록 작아짐)
-        const baseArmRadius = 0.25 * tapering
+        // 나선팔이 중심부에서 나가는 형태로 두께 감소
+        const armProgress = (distanceRatio - 0.25) / 0.75 // 0-1 (25%에서 시작)
+        const armRadius =
+          armStartRadius - (armStartRadius - armEndRadius) * armProgress
 
-        // 별들을 흩뿌리기 (M51 스타일: 나선팔이 뚜렷하지만 사이에도 별 분포):
-        // 15%는 나선팔 중심에 집중 (나선팔이 뚜렷함)
-        // 85%는 매우 광범위하게 퍼져있음 (나선팔 주변 + 나선팔 사이에 골고루)
+        // 나선팔 중심에서의 거리 (원통형 단면)
+        // 중심부에서 나선팔이 뻗어나오는 효과를 강화
         const rand = Math.random()
         let scatterFactor
-        if (rand < 0.15) {
-          scatterFactor = 1 // 나선팔 중심 (15%)
+
+        // 중심부에 가까울수록 더 집중적으로
+        const centerProximity = 1 - armProgress // 0에서 1로 (중심부에서 멀어질수록 감소)
+
+        if (rand < 0.5 + centerProximity * 0.3) {
+          // 50-80%는 나선팔 중심에 집중 (중심부에 가까울수록 더 집중)
+          scatterFactor = 0.01 + Math.random() * (0.1 + centerProximity * 0.1) // 0.01 ~ 0.2
         } else {
-          // 나머지 85%는 매우 광범위하게 균등 분포 (1.5 ~ 12.0)
-          scatterFactor = 1.5 + Math.random() * 10.5 // 1.5 ~ 12.0
+          // 나머지는 나선팔 주변에 분포
+          scatterFactor = 0.2 + Math.random() * 0.8 // 0.2 ~ 1.0
         }
-        const effectiveRadius = baseArmRadius * scatterFactor
 
-        // 동그란 단면: 가우시안 분포 + 극좌표
-        const offsetDistance = Math.abs(gaussianRandom()) * effectiveRadius // 중심에서의 거리
-        const offsetAngle = Math.random() * Math.PI * 2 // 0-360도
+        const effectiveRadius = armRadius * scatterFactor
 
-        // 극좌표를 직교좌표로 변환
-        const offsetX = offsetDistance * Math.cos(offsetAngle)
-        const offsetY = offsetDistance * Math.sin(offsetAngle)
+        // 나선팔 중심으로부터의 각도 오프셋 (원통형 단면)
+        const angleOffset = Math.random() * 2 * Math.PI
+        angularOffset = effectiveRadius * Math.cos(angleOffset)
+        radialSpread = effectiveRadius * Math.sin(angleOffset)
 
-        // 각도 오프셋과 반지름 오프셋으로 변환
-        angularOffset = offsetX / Math.max(galaxyRadius, 1)
-        radialSpread = offsetY
-
-        // 나선팔: 나선 중심 각도 + 오프셋
         finalAngle = spiralCenterAngle + angularOffset
       }
 
       // 최종 나선 각도 (중심부는 랜덤, 나선팔은 계산된 각도)
       const spiralAngle = finalAngle
 
-      // Y축 위치 계산: 나선팔은 동그란 원통처럼
-      let yPosition
-
+      // Y축 위치 계산: 구형 팽대부와 원통형 나선팔
       if (distanceRatio < 0.25) {
-        // 중심부 (bulge)는 완전한 구형 - phi 각도로 Y축 계산
-        const theta = Math.random() * Math.PI * 2
-        const phi = Math.acos(2 * Math.random() - 1) // 균일한 구형 분포
-        const r = Math.pow(Math.random(), 1 / 3) * galaxyRadius * 2.0
-
-        yPosition = r * Math.cos(phi) // 구형 Y 좌표
+        // 중심부 (구형 팽대부): 이미 위에서 구형 좌표계로 계산됨
+        // yPosition은 이미 설정됨
       } else {
-        // 나선팔: 동그란 원통 - Y축도 흩뿌리기
-        const tapering = Math.exp(-distanceRatio * 2.5)
-        const baseArmRadius = 0.25 * tapering
+        // 나선팔: 중심부에서 뻗어나가는 원통형 Y축
+        const yMaxArmRadius = 0.5 // 중심부에서의 최대 Y축 반지름 (가장 두껍게)
+        const yMinArmRadius = 0.03 // 외곽에서의 최소 Y축 반지름 (가장 얇게)
+        const yArmProgress = (distanceRatio - 0.25) / 0.75 // 0-1 (25%에서 시작)
+        const yArmRadius =
+          yMaxArmRadius - (yMaxArmRadius - yMinArmRadius) * yArmProgress
 
-        // Y축도 같은 방식으로 흩뿌리기 (XZ평면과 동일한 비율)
+        // Y축도 같은 방식으로 흩뿌리기 (나선팔 중심에 집중)
         const yRand = Math.random()
         let yScatterFactor
-        if (yRand < 0.15) {
-          yScatterFactor = 1 // 나선팔 중심 (15%)
-        } else {
-          // 나머지 85%는 매우 광범위하게 균등 분포 (1.5 ~ 12.0)
-          yScatterFactor = 1.5 + Math.random() * 10.5 // 1.5 ~ 12.0
-        }
-        const yEffectiveRadius = baseArmRadius * yScatterFactor
 
+        // 중심부에 가까울수록 더 집중적으로
+        const yCenterProximity = 1 - yArmProgress // 0에서 1로 (중심부에서 멀어질수록 감소)
+
+        if (yRand < 0.5 + yCenterProximity * 0.3) {
+          // 50-80%는 나선팔 중심에 집중 (중심부에 가까울수록 더 집중)
+          yScatterFactor = 0.01 + Math.random() * (0.1 + yCenterProximity * 0.1) // 0.01 ~ 0.2
+        } else {
+          // 나머지는 나선팔 주변에 분포
+          yScatterFactor = 0.2 + Math.random() * 0.8 // 0.2 ~ 1.0
+        }
+
+        const yEffectiveRadius = yArmRadius * yScatterFactor
         const yOffsetDistance = Math.abs(gaussianRandom()) * yEffectiveRadius
         const yOffsetSign = Math.random() < 0.5 ? -1 : 1
-        yPosition = yOffsetSign * yOffsetDistance * 2 // 2배로 더 동그랗게
+        yPosition = yOffsetSign * yOffsetDistance
       }
 
       // 임시 은하 위치
@@ -200,7 +208,7 @@ function BigBangGalaxy({
 
       // 3D 거리 체크: 블랙홀 중심(0,0,0)으로부터의 거리
       const distanceFromBlackHole = galaxyPosition.length()
-      const minDistance3D = 0.03 // 블랙홀 바로 외곽 (작은 블랙홀)
+      const minDistance3D = 0 // 나선팔이 블랙홀과 밀착 (0으로 설정)
 
       // 블랙홀에 너무 가까우면 최소 거리로 밀어내기
       if (distanceFromBlackHole < minDistance3D) {
@@ -211,7 +219,12 @@ function BigBangGalaxy({
       const color = new THREE.Color(1, 1, 1) // 순수한 흰색
 
       // 나선팔 중심으로부터의 거리에 따른 밝기 감소
-      const armDistanceFactor = Math.exp(-Math.abs(angularOffset) * 1.5)
+      // 중심부에서 나선팔이 뻗어나오는 효과를 강화
+      const centerProximity =
+        distanceRatio < 0.25 ? 1 : 1 - (distanceRatio - 0.25) / 0.75
+      const armDistanceFactor = Math.exp(
+        -Math.abs(angularOffset) * (1.5 + centerProximity * 0.5)
+      )
 
       // 크기 (나선 중심에서 크고, 멀어질수록 작게)
       let size
@@ -227,7 +240,9 @@ function BigBangGalaxy({
       }
 
       // 나선팔에서 멀어질수록 파티클 크기 감소
-      size = size * (0.4 + armDistanceFactor * 0.6)
+      // 중심부에서 나선팔이 뻗어나오는 효과를 강화
+      size =
+        size * (0.4 + armDistanceFactor * 0.6) * (0.7 + centerProximity * 0.3)
       size = Math.max(size, 0.002) // 최소 크기 (매우 작게)
 
       data.push({
@@ -238,6 +253,7 @@ function BigBangGalaxy({
         spiralAngle,
         distanceRatio, // 거리 비율 저장
         armDistanceFactor, // 나선팔 중심으로부터의 거리 저장
+        glowIntensity: 2.5, // 기본 글로우 강도 (나중에 별 유형에 따라 업데이트)
       })
     }
 
@@ -259,13 +275,18 @@ function BigBangGalaxy({
         : state.clock.elapsedTime - startTimeRef.current
     const time = state.clock.elapsedTime
 
-    // 단계별 전환
-    // 0-3초: 빅뱅 폭발
-    // 3-15초: 은하로 천천히 수렴 + 회전 시작 (각운동량!)
-    // 15초+: 완성된 은하 회전
+    // coreBrightness 참조 (리렌더링 트리거용)
+    const currentCoreBrightness = coreBrightness
 
-    const explosionPhase = Math.min(elapsed / 3, 1) // 0-1 (3초)
-    const galaxyFormationPhase = Math.max(0, Math.min((elapsed - 3) / 12, 1)) // 0-1 (12초)
+    // 단계별 전환
+    // 0-3초: 태초의 한 점 (정지)
+    // 3-13초: 빅뱅 폭발 (10초)
+    // 13-23초: 은하 형성 (10초)
+    // 23초+: 완성된 은하 회전
+
+    const singularityPhase = Math.min(elapsed / 3, 1) // 0-1 (0-3초: 태초의 한 점)
+    const explosionPhase = Math.max(0, Math.min((elapsed - 3) / 10, 1)) // 0-1 (3-13초: 빅뱅)
+    const galaxyFormationPhase = Math.max(0, Math.min((elapsed - 13) / 10, 1)) // 0-1 (13-23초: 은하 형성)
 
     for (let i = 0; i < particleCount; i++) {
       const data = particleData[i]
@@ -273,26 +294,62 @@ function BigBangGalaxy({
       const position = new THREE.Vector3()
 
       if (elapsed < 3) {
-        // 빅뱅 폭발 단계
-        const explosionPos = data.initialVelocity
+        // 태초의 한 점 (0-3초): 모든 파티클이 중심에 모여있음
+        position.set(0, 0, 0)
+      } else if (elapsed < 13) {
+        // 빅뱅 폭발 단계 (3-13초): 폭발적으로 퍼져나감 + 여러 번의 파장
+        const explosionTime = elapsed - 3 // 0-10초
+        const baseExplosionPos = data.initialVelocity
           .clone()
-          .multiplyScalar(elapsed)
-        position.copy(explosionPos)
+          .multiplyScalar(explosionTime)
+
+        // 여러 번의 파장 효과
+        const waveCount = 3 // 3번의 파장으로 단순화
+        let waveOffset = new THREE.Vector3(0, 0, 0)
+
+        for (let wave = 0; wave < waveCount; wave++) {
+          const wavePhase = (explosionTime - wave * 3.0) / 10.0 // 각 파장은 3.0초씩 지연
+          if (wavePhase > 0 && wavePhase < 1.0) {
+            const waveIntensity = Math.sin(wavePhase * Math.PI) // 0~1~0
+            const waveRadius = wavePhase * 15.0 // 파장 반지름 증가
+
+            // 파장 방향을 더 단순하게 (X, Y, Z 축 방향)
+            const waveDirection = new THREE.Vector3(
+              Math.sin((wave * Math.PI * 2) / 3 + time * 1.5), // X축 파장
+              Math.cos((wave * Math.PI * 2) / 3 + time * 1.5), // Y축 파장
+              Math.sin((wave * Math.PI * 2) / 3 + time * 1.2) // Z축 파장
+            )
+
+            // 파장 오프셋 추가 (강도 대폭 증가)
+            waveOffset.add(waveDirection.multiplyScalar(waveIntensity * 5.0))
+          }
+        }
+
+        position.copy(baseExplosionPos).add(waveOffset)
       } else {
-        // 은하 형성 단계 - 회전하면서 수렴!
-        const explosionPos = data.initialVelocity.clone().multiplyScalar(3)
+        // 은하 형성 단계 (13초+) - 회전하면서 수렴!
+        const explosionPos = data.initialVelocity.clone().multiplyScalar(10) // 10초간 폭발한 최종 위치
 
         // 은하 형성 시작부터 회전 (각운동량 보존)
-        // 천천히, 부드럽게 회전 증가
-        const timeSinceFormation = elapsed - 3
-        // galaxyFormationPhase² 사용으로 초반에는 매우 느리게, 후반에 점진적으로 증가
-        const rotationSpeed = 0.05 * Math.pow(galaxyFormationPhase, 2)
-        const rotationAngle = timeSinceFormation * rotationSpeed
-        const currentSpiralAngle = data.spiralAngle + rotationAngle
+        // 차등 회전: 중심부가 빠르게, 외곽이 느리게 회전
+        const timeSinceFormation = elapsed - 13
+
+        // 반지름 계산
         const radius = Math.sqrt(
           data.galaxyPosition.x * data.galaxyPosition.x +
             data.galaxyPosition.z * data.galaxyPosition.z
         )
+
+        // 차등 회전 속도: 중심부가 빠르고 외곽이 느림 (케플러 회전)
+        // radius가 작을수록 rotationSpeed가 큼
+        const normalizedRadius = Math.min(radius / 20, 1) // 0~1
+        const differentialRotation = 1 / (1 + normalizedRadius * 3) // 중심: 1.0, 외곽: 0.25
+
+        // galaxyFormationPhase² 사용으로 초반에는 매우 느리게, 후반에 점진적으로 증가
+        const baseRotationSpeed = 0.05 * Math.pow(galaxyFormationPhase, 2)
+        const rotationSpeed = baseRotationSpeed * differentialRotation
+        const rotationAngle = timeSinceFormation * rotationSpeed
+        const currentSpiralAngle = data.spiralAngle + rotationAngle
 
         const rotatedGalaxyPos = new THREE.Vector3(
           Math.cos(currentSpiralAngle) * radius,
@@ -338,10 +395,15 @@ function BigBangGalaxy({
       let finalColor: THREE.Color
 
       if (elapsed < 3) {
-        // 빅뱅 단계 (0-3초): 극초고온 색상 (더 강렬한 파란-흰색 글로우)
+        // 태초의 한 점 (0-3초): 무한 밀도, 극초고온
+        // 모든 파티클이 하나의 점에 집중되어 있음
+        finalColor = new THREE.Color().setHSL(0.6, 0.8, 1.0) // 밝은 청백색
+        finalColor.multiplyScalar(2.0) // 더 밝게 조정
+        data.glowIntensity = 8.0 // 극강한 글로우
+      } else if (elapsed < 13) {
+        // 빅뱅 폭발 단계 (3-13초): 극초고온 색상 (더 강렬한 파란-흰색 글로우)
         // 중심부에서 외곽으로 온도 그라데이션
         const explosionTemp = 1 - data.distanceRatio * 0.5
-        const explosionProgress = explosionPhase // 0-1
 
         if (explosionTemp > 0.85) {
           // 극초고온 (>10^11 K): 강렬한 청백색 글로우
@@ -349,30 +411,35 @@ function BigBangGalaxy({
           const saturation = 0.6 + explosionTemp * 0.4 // 0.6-1.0 (매우 포화됨)
           const lightness = 1.0 // 최대 밝기
           finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
+          data.glowIntensity = 7.0 // 극강한 글로우
         } else if (explosionTemp > 0.7) {
           // 초고온 (10^10-10^11 K): 밝은 청백색
           const hue = 0.55 + (1 - explosionTemp) * 0.05 // 0.55-0.58 (파란색)
           const saturation = 0.5 + explosionTemp * 0.3 // 0.5-0.8
           const lightness = 0.98 + explosionTemp * 0.02 // 0.98-1.0
           finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
+          data.glowIntensity = 6.0 // 강한 글로우
         } else if (explosionTemp > 0.5) {
           // 고온 (10^9-10^10 K): 흰색-청백색
           const hue = 0.52 + (1 - explosionTemp) * 0.1 // 0.52-0.6 (연한 파랑)
           const saturation = 0.3 + explosionTemp * 0.3 // 0.3-0.6
           const lightness = 0.95 + explosionTemp * 0.05 // 0.95-1.0
           finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
+          data.glowIntensity = 5.0 // 강한 글로우
         } else if (explosionTemp > 0.3) {
           // 중온 (10^8-10^9 K): 흰색
           finalColor = new THREE.Color(1, 1, 1)
+          data.glowIntensity = 4.0 // 중간 글로우
         } else {
           // 온도 감소: 흰색-청백색 전환
           const hue = 0.55
           const saturation = 0.2 * explosionTemp
           const lightness = 0.9 + explosionTemp * 0.1
           finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
+          data.glowIntensity = 3.0 // 약한 글로우
         }
       } else if (galaxyFormationPhase < 0.8) {
-        // 은하 형성 중 (3-12초): 온도 하강
+        // 은하 형성 중 (13-23초): 온도 하강
         // 뜨거운 흰색에서 일반 흰색으로
         const coolingPhase = galaxyFormationPhase
         const temp = 1 - data.distanceRatio * 0.3
@@ -381,54 +448,122 @@ function BigBangGalaxy({
         const saturation = 0.1 * (1 - coolingPhase)
         const lightness = 0.9 + temp * 0.1
         finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
+        data.glowIntensity = 3.0 + coolingPhase * 2.0 // 3.0 → 5.0
       } else {
-        // 은하 형성 완료 후 (12초+): 온도별 색상
-        if (data.distanceRatio < 0.15) {
-          // 중심부 (0-15%): 블랙홀 강착원반 - 극고온
-          // 온도: 10^7-10^8 K → 흰색-청백색-파랑 (밝기 감소)
-          const centerPhase = data.distanceRatio / 0.15
-          const hue = 0.55 + centerPhase * 0.05 // 0.55-0.60 (청록-파랑)
-          const saturation = 0.7 - centerPhase * 0.2 // 0.7-0.5
-          const lightness = 0.5 + centerPhase * 0.3 // 0.5-0.8 (밝기 낮춤)
-          finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
-        } else if (data.distanceRatio < 0.3) {
-          // 내부 (15-30%): 고온 영역 - 흰색
-          // 온도: 10^6-10^7 K → 청백색-흰색
-          const transitionPhase = (data.distanceRatio - 0.15) / 0.15
-          const hotColor = new THREE.Color().setHSL(0.6, 0.5, 0.9)
-          const whiteColor = new THREE.Color(1, 1, 1)
-          finalColor = hotColor.clone().lerp(whiteColor, transitionPhase)
+        // 은하 형성 완료 후 (12초+): 다양한 별 색상
+        // 실제 별들의 색상: O(파랑), B(청백), A(흰색), F(황백), G(노랑), K(주황), M(빨강)
+
+        // 별의 유형을 랜덤하게 결정 (거리와 나선팔 위치에 따라 가중치 적용)
+        const starTypeRandom = Math.random()
+        let starType
+
+        if (data.distanceRatio < 0.3) {
+          // 중심부: 주로 고온 별들 (O, B, A형)
+          if (starTypeRandom < 0.1) starType = 'O' // 10% - 파란색 거성
+          else if (starTypeRandom < 0.3) starType = 'B' // 20% - 청백색
+          else if (starTypeRandom < 0.6) starType = 'A' // 30% - 흰색
+          else if (starTypeRandom < 0.8) starType = 'F' // 20% - 황백색
+          else starType = 'G' // 20% - 노랑
         } else if (data.distanceRatio < 0.6) {
-          // 중간부 (30-60%): 온화 영역 - 노랑-주황
-          // 온도: 10^5-10^6 K → 흰색-노랑
-          const midPhase = (data.distanceRatio - 0.3) / 0.3
-          const hue = 0.15 * midPhase // 0-0.15 (빨강-주황-노랑)
-          const saturation = 0.3 + midPhase * 0.3 // 0.3-0.6
-          const lightness = 0.9 - midPhase * 0.2 // 0.9-0.7
-          finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
+          // 중간부: 다양한 별들
+          if (starTypeRandom < 0.05) starType = 'O' // 5% - 파란색
+          else if (starTypeRandom < 0.15) starType = 'B' // 10% - 청백색
+          else if (starTypeRandom < 0.35) starType = 'A' // 20% - 흰색
+          else if (starTypeRandom < 0.55) starType = 'F' // 20% - 황백색
+          else if (starTypeRandom < 0.75) starType = 'G' // 20% - 노랑
+          else if (starTypeRandom < 0.9) starType = 'K' // 15% - 주황
+          else starType = 'M' // 10% - 빨강
         } else {
-          // 외곽부 (60%+): 저온 영역 - 빨강-어두운 빨강
-          // 온도: 10^3-10^5 K → 노랑-주황-빨강
-          const outerPhase = (data.distanceRatio - 0.6) / 0.4
-          const hue = 0.05 - outerPhase * 0.02 // 0.05-0.03 (주황-빨강)
-          const saturation = 0.6 + outerPhase * 0.2 // 0.6-0.8
-          const lightness = 0.5 - outerPhase * 0.3 // 0.5-0.2 (어두워짐)
-          finalColor = new THREE.Color().setHSL(hue, saturation, lightness)
+          // 외곽부: 주로 저온 별들 (K, M형)
+          if (starTypeRandom < 0.1) starType = 'F' // 10% - 황백색
+          else if (starTypeRandom < 0.25) starType = 'G' // 15% - 노랑
+          else if (starTypeRandom < 0.55) starType = 'K' // 30% - 주황
+          else starType = 'M' // 45% - 빨강
         }
 
-        // 나선팔에서 멀수록 추가 감소
-        const armFactor = 0.6 + data.armDistanceFactor * 0.4
+        // 별 유형에 따른 색상 및 글로우 설정 (더 밝게 조정)
+        let glowIntensity = 1.0
+        switch (starType) {
+          case 'O': // 파란색 거성 (O형) - 매우 밝음
+            finalColor = new THREE.Color().setHSL(0.6, 1.0, 1.0) // 채도와 밝기 최대
+            glowIntensity = 6.0 // 매우 강한 글로우
+            break
+          case 'B': // 청백색 (B형) - 매우 밝음
+            finalColor = new THREE.Color().setHSL(0.55, 0.8, 1.0) // 청백색 강화
+            glowIntensity = 5.0 // 강한 글로우
+            break
+          case 'A': // 흰색 (A형) - 밝음
+            finalColor = new THREE.Color().setHSL(0.0, 0.0, 1.0) // 순수 흰색
+            glowIntensity = 4.0 // 강한 글로우
+            break
+          case 'F': // 황백색 (F형) - 중간 밝음
+            finalColor = new THREE.Color().setHSL(0.12, 0.6, 1.0) // 황백색 강화
+            glowIntensity = 3.5 // 중간 글로우
+            break
+          case 'G': // 노랑 (G형) - 우리 태양, 중간 밝음
+            finalColor = new THREE.Color().setHSL(0.15, 0.9, 1.0) // 노랑 강화
+            glowIntensity = 3.0 // 중간 글로우
+            break
+          case 'K': // 주황 (K형) - 약간 밝음
+            finalColor = new THREE.Color().setHSL(0.08, 1.0, 1.0) // 주황 강화
+            glowIntensity = 2.5 // 약한 글로우
+            break
+          case 'M': // 빨강 (M형) - 적색 거성, 약간 밝음
+            finalColor = new THREE.Color().setHSL(0.02, 1.0, 1.0) // 빨강 강화
+            glowIntensity = 2.0 // 약한 글로우
+            break
+          default:
+            finalColor = new THREE.Color(1, 1, 1) // 기본 흰색
+            glowIntensity = 3.0
+        }
+
+        // 모든 별의 색상을 더 밝게 조정 (bloom 효과를 위해)
+        finalColor.multiplyScalar(1.5)
+
+        // 중심부 밝기 조절 (coreBrightness 적용)
+        if (data.distanceRatio < 0.3) {
+          const centerBrightness = 0.3 + currentCoreBrightness * 0.7
+          finalColor.multiplyScalar(centerBrightness)
+          glowIntensity *= centerBrightness // 글로우도 중심부 밝기에 따라 조절
+        }
+
+        // 나선팔에서 멀수록 약간 감소
+        const armFactor = 0.7 + data.armDistanceFactor * 0.3
         finalColor.multiplyScalar(armFactor)
+        glowIntensity *= armFactor // 글로우도 나선팔 거리에 따라 조절
+
+        // 글로우 강도 업데이트
+        data.glowIntensity = glowIntensity
       }
 
-      particlesRef.current.setColorAt(i, finalColor)
+      // 파티클 색상을 더 밝게 조정 (bloom 효과를 위해)
+      const brightColor = finalColor.clone().multiplyScalar(2.0)
+      particlesRef.current.setColorAt(i, brightColor)
     }
 
     particlesRef.current.instanceMatrix.needsUpdate = true
     if (particlesRef.current.instanceColor) {
       particlesRef.current.instanceColor.needsUpdate = true
     }
+
+    // material의 emissive 색상을 흰색으로 설정하고 강도 조정
+    if (particlesRef.current.material) {
+      const material = particlesRef.current
+        .material as THREE.MeshStandardMaterial
+      material.emissive.setHex(0xffffff)
+      material.emissiveIntensity = 4.0
+    }
   })
+
+  // 평균 글로우 강도 계산
+  const averageGlowIntensity = useMemo(() => {
+    if (particleData.length === 0) return 2.5
+    const totalGlow = particleData.reduce(
+      (sum, data) => sum + data.glowIntensity,
+      0
+    )
+    return totalGlow / particleData.length
+  }, [particleData])
 
   return (
     <instancedMesh
@@ -440,7 +575,7 @@ function BigBangGalaxy({
         vertexColors
         color={0xffffff}
         emissive={0xffffff}
-        emissiveIntensity={2.5}
+        emissiveIntensity={4.0}
         toneMapped={false}
       />
     </instancedMesh>
@@ -458,17 +593,21 @@ function DynamicCamera() {
 
     const elapsed = state.clock.elapsedTime
 
-    let targetDistance = 7 // 기본값 (빅뱅 시작)
+    let targetDistance = 7 // 기본값
 
     if (elapsed < 3) {
-      // 빅뱅 단계 (0-3초): 거리 7로 고정
-      targetDistance = 7
-    } else if (elapsed < 15) {
-      // 은하 형성 단계 (3-15초): 7에서 20으로 부드럽게 줌아웃
-      const transitionPhase = (elapsed - 3) / 12 // 0 ~ 1
+      // 태초의 한 점 (0-3초): 매우 가까이 (한 점을 확대해서 봄)
+      targetDistance = 3
+    } else if (elapsed < 13) {
+      // 빅뱅 폭발 단계 (3-13초): 3에서 7로 부드럽게 줌아웃
+      const transitionPhase = (elapsed - 3) / 10 // 0 ~ 1
+      targetDistance = 3 + transitionPhase * 4 // 3 → 7
+    } else if (elapsed < 23) {
+      // 은하 형성 단계 (13-23초): 7에서 20으로 부드럽게 줌아웃
+      const transitionPhase = (elapsed - 13) / 10 // 0 ~ 1
       targetDistance = 7 + transitionPhase * 13 // 7 → 20
     } else {
-      // 은하 완성 후 (15초+): 거리 20으로 고정, 사용자 제어 허용
+      // 은하 완성 후 (23초+): 거리 20으로 고정, 사용자 제어 허용
       targetDistance = 20
       userControlledRef.current = true
     }
@@ -565,10 +704,10 @@ function BlackHoleSystem() {
 
   useFrame((state) => {
     const elapsed = state.clock.elapsedTime
-    // 15초 이후(은하 형성 완료 후)에만 블랙홀 표시
-    if (elapsed > 15 && !showBlackHole) {
+    // 23초 이후(은하 형성 완료 후)에만 블랙홀 표시
+    if (elapsed > 23 && !showBlackHole) {
       setShowBlackHole(true)
-    } else if (elapsed <= 15 && showBlackHole) {
+    } else if (elapsed <= 23 && showBlackHole) {
       setShowBlackHole(false)
     }
   })
@@ -607,7 +746,9 @@ function Scene({
   currentTime,
   duration,
   isPlaying,
+  coreBrightness,
   onParticleCountChange,
+  onCoreBrightnessChange,
   onTimeChange,
   onPlayPause,
   onReset,
@@ -619,7 +760,9 @@ function Scene({
   currentTime: number
   duration: number
   isPlaying: boolean
+  coreBrightness: number
   onParticleCountChange: (count: number) => void
+  onCoreBrightnessChange: (brightness: number) => void
   onTimeChange: (time: number) => void
   onPlayPause: () => void
   onReset: () => void
@@ -638,6 +781,8 @@ function Scene({
           <ControlPanel
             particleCount={particleCount}
             onParticleCountChange={onParticleCountChange}
+            coreBrightness={coreBrightness}
+            onCoreBrightnessChange={onCoreBrightnessChange}
             currentTime={currentTime}
             duration={duration}
             isPlaying={isPlaying}
@@ -664,6 +809,7 @@ function Scene({
       <BigBangGalaxy
         particleCount={particleCount}
         controlledTime={controlledTime}
+        coreBrightness={coreBrightness}
       />
 
       {/* 은하 형성 후에만 블랙홀과 강착원반 표시 */}
@@ -671,10 +817,10 @@ function Scene({
 
       <EffectComposer>
         <Bloom
-          intensity={1.5}
-          radius={0.55}
-          luminanceThreshold={0.2}
-          luminanceSmoothing={0.4}
+          intensity={2.0}
+          radius={0.8}
+          luminanceThreshold={0.1}
+          luminanceSmoothing={0.3}
           mipmapBlur
         />
       </EffectComposer>
@@ -686,6 +832,8 @@ function Scene({
 function ControlPanel({
   particleCount,
   onParticleCountChange,
+  coreBrightness,
+  onCoreBrightnessChange,
   currentTime,
   duration,
   isPlaying,
@@ -697,6 +845,8 @@ function ControlPanel({
 }: {
   particleCount: number
   onParticleCountChange: (count: number) => void
+  coreBrightness: number
+  onCoreBrightnessChange: (brightness: number) => void
   currentTime: number
   duration: number
   isPlaying: boolean
@@ -709,7 +859,14 @@ function ControlPanel({
   const [isMinimized, setIsMinimized] = useState(false)
 
   return (
-    <div className="bg-black/80 backdrop-blur-xl rounded-2xl text-white border border-white/10 shadow-2xl transition-all duration-300 w-[280px]">
+    <div
+      className="bg-black/80 backdrop-blur-xl rounded-2xl text-white border border-white/10 shadow-2xl transition-all duration-300 w-[280px]"
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerMove={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
+    >
       {/* 헤더 - 항상 표시 */}
       <div
         className={`flex items-center justify-between p-4 ${
@@ -750,6 +907,31 @@ function ControlPanel({
             <div className="flex justify-between text-xs text-white/40 font-mono">
               <span>10K</span>
               <span>200K</span>
+            </div>
+          </div>
+
+          {/* 중심부 밝기 설정 */}
+          <div className="mb-6 pb-6 border-b border-white/10">
+            <div className="text-xs text-white/50 uppercase tracking-wide mb-2">
+              Core Brightness
+            </div>
+            <div className="text-3xl font-mono font-bold mb-3">
+              {Math.round(coreBrightness * 100)}%
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="5"
+              value={coreBrightness * 100}
+              onChange={(e) =>
+                onCoreBrightnessChange(Number(e.target.value) / 100)
+              }
+              className="w-full h-2 bg-white/10 rounded-full outline-none cursor-pointer appearance-none mb-2"
+            />
+            <div className="flex justify-between text-xs text-white/40 font-mono">
+              <span>어두움</span>
+              <span>밝음</span>
             </div>
           </div>
 
@@ -817,6 +999,7 @@ export default function Explosion() {
   const [currentTime, setCurrentTime] = useState(0)
   const [isPlaying, setIsPlaying] = useState(true)
   const [duration] = useState(30) // 30초 타임라인
+  const [coreBrightness, setCoreBrightness] = useState(0.5) // 중심부 밝기 (0.0 ~ 1.0)
   const animationRef = useRef<number | null>(null)
   const lastTimeRef = useRef<number>(Date.now())
 
@@ -864,8 +1047,9 @@ export default function Explosion() {
   }
 
   const getPhaseLabel = (time: number) => {
-    if (time < 3) return '빅뱅 폭발 단계'
-    if (time < 15) return '은하 형성 중'
+    if (time < 3) return '태초의 한 점'
+    if (time < 13) return '빅뱅 폭발 단계'
+    if (time < 23) return '은하 형성 중'
     return '은하 회전 단계'
   }
 
@@ -890,7 +1074,9 @@ export default function Explosion() {
           currentTime={currentTime}
           duration={duration}
           isPlaying={isPlaying}
+          coreBrightness={coreBrightness}
           onParticleCountChange={setParticleCount}
+          onCoreBrightnessChange={setCoreBrightness}
           onTimeChange={handleTimeChange}
           onPlayPause={handlePlayPause}
           onReset={handleReset}

@@ -90,15 +90,20 @@ function BigBangGalaxy({
       // 나선팔이 중심부 구형에서 시작되도록 수정
       const effectiveRadius = galaxyRadius // 실제 은하 반지름 사용
 
-      // 나선팔 시작점에서 스파이럴이 2번부터 시작되도록 조정
+      // 나선팔 시작점이 스파이럴이 많이 진행된 상태에서 구형으로 모여서 외곽으로 뻗쳐나가도록 조정
       let spiralCenterAngle
-      if (distanceRatio < 0.15) {
-        // 팽대부: 스파이럴 없이 직선적으로
-        spiralCenterAngle = baseArmAngle
+      if (distanceRatio < 0.2) {
+        // 중심부 (0-20%): 스파이럴이 많이 진행된 상태에서 구형으로 모임
+        // 스파이럴이 이미 많이 진행된 상태에서 시작
+        const spiralProgress = distanceRatio / 0.2 // 0-1 (0%에서 시작)
+        const preSpiralOffset = 3.0 + spiralProgress * 2.0 // 3.0에서 5.0까지 (이미 많이 진행된 상태)
+        spiralCenterAngle =
+          baseArmAngle +
+          (galaxyRadius * distanceRatio + spiralScatter) * preSpiralOffset
       } else {
-        // 나선팔: 스파이럴이 2번부터 시작 (팽대부 끝에서부터)
-        const spiralProgress = (distanceRatio - 0.15) / 0.85 // 0-1 (15%에서 시작)
-        const spiralOffset = 7.0 + spiralProgress * (spiralTightness - 8.0) // 2.0에서 시작해서 spiralTightness까지
+        // 나선팔 (20%+): 구형에서 뻗쳐나가는 나선팔
+        const spiralProgress = (distanceRatio - 0.2) / 0.8 // 0-1 (20%에서 시작)
+        const spiralOffset = 5.0 + spiralProgress * (spiralTightness - 5.0) // 5.0에서 spiralTightness까지
         spiralCenterAngle =
           baseArmAngle +
           (galaxyRadius * distanceRatio + spiralScatter) * spiralOffset
@@ -118,13 +123,13 @@ function BigBangGalaxy({
       let finalAngle // 최종 각도
       let yPosition // Y축 위치
 
-      if (distanceRatio < 0.15) {
-        // 중심부 (0-15%): 나선팔의 팽대부 - 나선팔이 중심에서 시작되는 두꺼운 부분
-        const armStartRadius = 0.8 // 중심부에서의 나선팔 시작 반지름 (매우 두껍게)
-        const armEndRadius = 0.6 // 팽대부 끝에서의 나선팔 반지름 (여전히 두껍게)
+      if (distanceRatio < 0.2) {
+        // 중심부 (0-20%): 스파이럴이 많이 진행된 상태에서 구형으로 모이는 부분
+        const armStartRadius = 1.0 // 중심부에서의 나선팔 시작 반지름 (매우 두껍게)
+        const armEndRadius = 0.8 // 팽대부 끝에서의 나선팔 반지름 (여전히 두껍게)
 
         // 팽대부 내에서의 진행도
-        const armProgress = distanceRatio / 0.15 // 0-1 (0%에서 시작)
+        const armProgress = distanceRatio / 0.2 // 0-1 (0%에서 시작)
         const armRadius =
           armStartRadius - (armStartRadius - armEndRadius) * armProgress
 
@@ -153,9 +158,9 @@ function BigBangGalaxy({
 
         finalAngle = spiralCenterAngle + angularOffset
 
-        // Y축 위치 계산 (팽대부)
-        const yMaxArmRadius = 0.8 // 중심부에서의 최대 Y축 반지름 (매우 두껍게)
-        const yMinArmRadius = 0.6 // 팽대부 끝에서의 Y축 반지름 (여전히 두껍게)
+        // Y축 위치 계산 (구형으로 모이는 팽대부)
+        const yMaxArmRadius = 1.0 // 중심부에서의 최대 Y축 반지름 (매우 두껍게)
+        const yMinArmRadius = 0.8 // 팽대부 끝에서의 Y축 반지름 (여전히 두껍게)
         const yArmRadius =
           yMaxArmRadius - (yMaxArmRadius - yMinArmRadius) * armProgress
 
@@ -177,13 +182,13 @@ function BigBangGalaxy({
         const yOffsetSign = Math.random() < 0.5 ? -1 : 1
         yPosition = yOffsetSign * yOffsetDistance
       } else {
-        // 나선팔 (15%+): 팽대부에서 뻗어나가는 원통형 나선팔
-        // 팽대부 끝에서 시작되어 외곽으로 뻗어나감
-        const armStartRadius = 0.6 // 팽대부 끝에서의 나선팔 시작 반지름 (팽대부와 연결)
+        // 나선팔 (20%+): 구형 팽대부에서 뻗어나가는 원통형 나선팔
+        // 구형 팽대부 끝에서 시작되어 외곽으로 뻗어나감
+        const armStartRadius = 0.8 // 팽대부 끝에서의 나선팔 시작 반지름 (팽대부와 연결)
         const armEndRadius = 0.03 // 외곽에서의 나선팔 끝 반지름 (가장 얇게)
 
         // 나선팔이 팽대부에서 나가는 형태로 두께 감소
-        const armProgress = (distanceRatio - 0.15) / 0.85 // 0-1 (15%에서 시작)
+        const armProgress = (distanceRatio - 0.2) / 0.8 // 0-1 (20%에서 시작)
         const armRadius =
           armStartRadius - (armStartRadius - armEndRadius) * armProgress
 
@@ -216,15 +221,15 @@ function BigBangGalaxy({
       // 최종 나선 각도 (중심부는 랜덤, 나선팔은 계산된 각도)
       const spiralAngle = finalAngle
 
-      // Y축 위치 계산: 팽대부와 원통형 나선팔
-      if (distanceRatio < 0.15) {
-        // 중심부 (팽대부): 이미 위에서 계산됨
+      // Y축 위치 계산: 구형 팽대부와 원통형 나선팔
+      if (distanceRatio < 0.2) {
+        // 중심부 (구형 팽대부): 이미 위에서 계산됨
         // yPosition은 이미 설정됨
       } else {
-        // 나선팔: 팽대부에서 뻗어나가는 원통형 Y축
-        const yMaxArmRadius = 0.6 // 팽대부 끝에서의 Y축 반지름 (팽대부와 연결)
+        // 나선팔: 구형 팽대부에서 뻗어나가는 원통형 Y축
+        const yMaxArmRadius = 0.8 // 팽대부 끝에서의 Y축 반지름 (팽대부와 연결)
         const yMinArmRadius = 0.03 // 외곽에서의 최소 Y축 반지름 (가장 얇게)
-        const yArmProgress = (distanceRatio - 0.15) / 0.85 // 0-1 (15%에서 시작)
+        const yArmProgress = (distanceRatio - 0.2) / 0.8 // 0-1 (20%에서 시작)
         const yArmRadius =
           yMaxArmRadius - (yMaxArmRadius - yMinArmRadius) * yArmProgress
 
@@ -253,8 +258,8 @@ function BigBangGalaxy({
       // 나선팔이 중심에서 시작되도록 위치 계산
       let galaxyPosition
 
-      if (distanceRatio < 0.15) {
-        // 팽대부: 중심에서 시작하여 팽대부를 형성
+      if (distanceRatio < 0.2) {
+        // 구형 팽대부: 중심에서 시작하여 구형 팽대부를 형성
         const spiralRadius = galaxyRadius * distanceRatio // 중심에서 시작
         galaxyPosition = new THREE.Vector3(
           Math.cos(spiralAngle) * spiralRadius,
@@ -262,7 +267,7 @@ function BigBangGalaxy({
           Math.sin(spiralAngle) * spiralRadius
         )
       } else {
-        // 나선팔: 팽대부에서 시작하여 나선을 따라 뻗어나감
+        // 나선팔: 구형 팽대부에서 시작하여 나선을 따라 뻗어나감
         const spiralRadius = galaxyRadius * distanceRatio // 팽대부에서 시작
         galaxyPosition = new THREE.Vector3(
           Math.cos(spiralAngle) * spiralRadius,

@@ -16,24 +16,31 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
     const data = []
 
     for (let i = 0; i < particleCount; i++) {
-      // 초기 빅뱅 속도 (구형으로 퍼짐)
-      const theta = Math.random() * Math.PI * 2
-      const phi = Math.acos(2 * Math.random() - 1)
-      const speed = 0.3 + Math.random() * 1.2
-
-      const initialVelocity = new THREE.Vector3(
-        Math.sin(phi) * Math.cos(theta) * speed,
-        Math.sin(phi) * Math.sin(theta) * speed,
-        Math.cos(phi) * speed
-      )
-
       // 은하 나선팔 각도 (3개의 주요 나선팔)
       const spiralArm = Math.floor(Math.random() * 3)
       const baseArmAngle = (spiralArm * Math.PI * 2) / 3
 
       // 은하 중심으로부터의 거리 (블랙홀 주변은 비워둠)
       const minRadius = 0.05 // 블랙홀 바로 밖부터 시작
-      const galaxyRadius = minRadius + Math.pow(Math.random(), 0.5) * 11.95
+      const maxRadius = 12
+      const galaxyRadius =
+        minRadius + Math.pow(Math.random(), 0.5) * (maxRadius - minRadius)
+
+      // 거리 비율 (0: 블랙홀 바로 밖, 1: 외곽)
+      const distanceRatio = (galaxyRadius - minRadius) / (maxRadius - minRadius)
+
+      // 빅뱅 속도 = 은하 거리에 비례!
+      // 은하 중심에 있을 파티클 → 빅뱅 때 느리게
+      // 은하 외곽에 있을 파티클 → 빅뱅 때 빠르게
+      const theta = Math.random() * Math.PI * 2
+      const phi = Math.acos(2 * Math.random() - 1)
+      const speed = 0.3 + distanceRatio * 1.2 // distanceRatio에 비례 (0.3 ~ 1.5)
+
+      const initialVelocity = new THREE.Vector3(
+        Math.sin(phi) * Math.cos(theta) * speed,
+        Math.sin(phi) * Math.sin(theta) * speed,
+        Math.cos(phi) * speed
+      )
 
       // 나선 각도 (거리에 비례)
       const spiralTightness = 0.8
@@ -54,9 +61,6 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
 
       // 최종 나선 각도
       const spiralAngle = spiralCenterAngle + angularOffset
-
-      // 거리 비율 (0: 블랙홀 바로 밖, 1: 외곽)
-      const distanceRatio = (galaxyRadius - minRadius) / (12 - minRadius)
 
       // 나선 중심으로부터의 거리 (파티클이 나선 주변에 퍼짐)
       const radialSpread =
@@ -118,31 +122,34 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
     const time = state.clock.elapsedTime
 
     // 단계별 전환
-    // 0-2초: 빅뱅 폭발
-    // 2-6초: 은하로 수렴
-    // 6초+: 은하 회전
+    // 0-3초: 빅뱅 폭발
+    // 3-15초: 은하로 천천히 수렴 + 회전 시작 (각운동량!)
+    // 15초+: 완성된 은하 회전
 
-    const explosionPhase = Math.min(elapsed / 2, 1) // 0-1
-    const galaxyFormationPhase = Math.max(0, Math.min((elapsed - 2) / 4, 1)) // 0-1
-    const rotationPhase = elapsed > 6 ? elapsed - 6 : 0
+    const explosionPhase = Math.min(elapsed / 3, 1) // 0-1 (3초)
+    const galaxyFormationPhase = Math.max(0, Math.min((elapsed - 3) / 12, 1)) // 0-1 (12초)
 
     for (let i = 0; i < particleCount; i++) {
       const data = particleData[i]
       const matrix = new THREE.Matrix4()
       const position = new THREE.Vector3()
 
-      if (elapsed < 2) {
+      if (elapsed < 3) {
         // 빅뱅 폭발 단계
         const explosionPos = data.initialVelocity
           .clone()
           .multiplyScalar(elapsed)
         position.copy(explosionPos)
       } else {
-        // 은하 형성 단계
-        const explosionPos = data.initialVelocity.clone().multiplyScalar(2)
+        // 은하 형성 단계 - 회전하면서 수렴!
+        const explosionPos = data.initialVelocity.clone().multiplyScalar(3)
 
-        // 은하 회전 각도
-        const rotationAngle = rotationPhase * 0.3
+        // 은하 형성 시작부터 회전 (각운동량 보존)
+        // 천천히, 부드럽게 회전 증가
+        const timeSinceFormation = elapsed - 3
+        // galaxyFormationPhase² 사용으로 초반에는 매우 느리게, 후반에 점진적으로 증가
+        const rotationSpeed = 0.05 * Math.pow(galaxyFormationPhase, 2)
+        const rotationAngle = timeSinceFormation * rotationSpeed
         const currentSpiralAngle = data.spiralAngle + rotationAngle
         const radius = Math.sqrt(
           data.galaxyPosition.x * data.galaxyPosition.x +
@@ -216,13 +223,13 @@ function BigBangGalaxy({ particleCount }: { particleCount: number }) {
       ref={particlesRef}
       args={[undefined, undefined, particleCount]}
     >
-      <sphereGeometry args={[0.02, 6, 6]} />
+      <sphereGeometry args={[0.03, 8, 8]} />
       <meshStandardMaterial
-        emissive={0x6699ff}
-        emissiveIntensity={1.8}
+        vertexColors
+        color={0xffffff}
+        emissive={0xffffff}
+        emissiveIntensity={3}
         toneMapped={false}
-        transparent
-        opacity={0.85}
       />
     </instancedMesh>
   )
@@ -234,10 +241,10 @@ function BlackHoleSystem() {
 
   useFrame((state) => {
     const elapsed = state.clock.elapsedTime
-    // 6초 이후(은하 형성 완료 후)에만 블랙홀 표시
-    if (elapsed > 6 && !showBlackHole) {
+    // 15초 이후(은하 형성 완료 후)에만 블랙홀 표시
+    if (elapsed > 15 && !showBlackHole) {
       setShowBlackHole(true)
-    } else if (elapsed <= 6 && showBlackHole) {
+    } else if (elapsed <= 15 && showBlackHole) {
       setShowBlackHole(false)
     }
   })
@@ -271,8 +278,8 @@ function Scene({ particleCount }: { particleCount: number }) {
         enableDamping
         autoRotate
         autoRotateSpeed={0.5}
-        minDistance={5}
-        maxDistance={30}
+        minDistance={1}
+        maxDistance={5}
       />
 
       <BigBangGalaxy particleCount={particleCount} />
@@ -282,10 +289,10 @@ function Scene({ particleCount }: { particleCount: number }) {
 
       <EffectComposer>
         <Bloom
-          intensity={2.5}
-          radius={1.0}
-          luminanceThreshold={0.1}
-          luminanceSmoothing={0.5}
+          intensity={1.5}
+          radius={0.8}
+          luminanceThreshold={0.2}
+          luminanceSmoothing={0.4}
           mipmapBlur
         />
       </EffectComposer>

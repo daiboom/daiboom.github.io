@@ -1207,7 +1207,7 @@ function ControlPanel({
 }
 
 export default function Explosion() {
-  const [particleCount, setParticleCount] = useState(100000)
+  const [particleCount, setParticleCount] = useState(50000)
   const [currentTime, setCurrentTime] = useState(0)
   const [isPlaying, setIsPlaying] = useState(true)
   const [duration] = useState(30) // 30초 타임라인

@@ -24,6 +24,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               WEBGL
             </Link>
             <Link
+              href="/blog"
+              className={`py-8 inline-flex items-center text-base tracking-tight
+                ${
+                  pathname.startsWith('/blog')
+                    ? 'text-black font-medium'
+                    : 'text-gray-500 hover:text-black'
+                }
+                transition-colors duration-200`}
+            >
+              블로그
+            </Link>
+            <Link
               href="/career"
               className={`py-8 inline-flex items-center text-base tracking-tight
                 ${

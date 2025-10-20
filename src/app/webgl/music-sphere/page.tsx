@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'

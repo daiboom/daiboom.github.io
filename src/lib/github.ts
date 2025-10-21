@@ -40,7 +40,7 @@ export async function getCommentsForPost(
   postTitle: string
 ): Promise<BlogComment[]> {
   try {
-    console.log('Fetching issues for post:', postTitle)
+    console.log('🔍 [GitHub API] Fetching issues for post:', postTitle)
 
     // GitHub Personal Access Token (환경변수에서 가져오기)
     const token = process.env.NEXT_PUBLIC_GITHUB_TOKEN
@@ -52,9 +52,10 @@ export async function getCommentsForPost(
     // 토큰이 있으면 인증 헤더 추가
     if (token && token !== 'your_fine_grained_token_here') {
       headers.Authorization = `token ${token}`
-      console.log('Using GitHub token for authentication')
+      console.log('✅ [GitHub API] Using GitHub token for authentication')
     } else {
-      console.log('No GitHub token found, using unauthenticated requests')
+      console.log('⚠️ [GitHub API] No GitHub token found, using unauthenticated requests')
+      console.log('🔧 [GitHub API] Token value:', token ? 'Present but invalid' : 'Not found')
     }
 
     // 1. 해당 포스트와 관련된 Issue 찾기
@@ -79,7 +80,7 @@ export async function getCommentsForPost(
     }
 
     const issues: GitHubIssue[] = await issuesResponse.json()
-    console.log('Found issues:', issues.length)
+    console.log('📋 [GitHub API] Found issues:', issues.length)
 
     // 2. 포스트 제목과 매칭되는 Issue 찾기
     const matchingIssue = issues.find((issue) => {

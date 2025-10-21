@@ -19,13 +19,13 @@ export default function BlogPostClient({ post }: BlogPostClientProps) {
     loadComments()
   }, [])
 
-  const loadComments = async () => {
-    try {
-      console.log('Loading comments for post:', post.title)
+      const loadComments = async () => {
+        try {
+          console.log('🚀 [Blog] Loading comments for post:', post.title)
 
-      // GitHub Issues API에서 직접 댓글 가져오기
-      const githubComments = await getCommentsForPost(post.title)
-      console.log('GitHub comments:', githubComments)
+          // GitHub Issues API에서 직접 댓글 가져오기
+          const githubComments = await getCommentsForPost(post.title)
+          console.log('💬 [Blog] GitHub comments received:', githubComments.length, 'comments')
 
       // 댓글이 없을 때 샘플 댓글 표시 (개발/테스트용)
       if (githubComments.length === 0) {

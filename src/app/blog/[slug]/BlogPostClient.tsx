@@ -21,8 +21,11 @@ export default function BlogPostClient({ post }: BlogPostClientProps) {
 
   const loadComments = async () => {
     try {
-      // GitHub Issues API에서 실제 댓글 가져오기
+      console.log('Loading comments for post:', post.title)
+      
+      // GitHub Issues API에서 직접 댓글 가져오기
       const githubComments = await getCommentsForPost(post.title)
+      console.log('GitHub comments:', githubComments)
       setComments(githubComments)
     } catch (error) {
       console.error('Failed to load comments:', error)
@@ -30,7 +33,7 @@ export default function BlogPostClient({ post }: BlogPostClientProps) {
       const sampleComments: BlogComment[] = [
         {
           id: 1,
-          body: 'GitHub Issues API 연결 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+          body: `댓글을 불러오는 중 오류가 발생했습니다. (${post.title}) 잠시 후 다시 시도해주세요.`,
           user: {
             login: 'system',
             avatar_url: 'https://github.com/github.png',

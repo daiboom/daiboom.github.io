@@ -93,34 +93,54 @@ export async function getCommentsForPost(
       matchingIssue.comments
     )
 
-    // 3. Issue의 댓글들 가져오기
-    const commentsResponse = await fetch(matchingIssue.comments_url, {
-      headers: {
-        Accept: 'application/vnd.github.v3+json',
-        'User-Agent': 'daiboom-blog',
-      },
-    })
+        // 3. Issue의 댓글들 가져오기
+        const commentsResponse = await fetch(matchingIssue.comments_url, {
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            'User-Agent': 'daiboom-blog',
+          },
+        })
 
-    if (!commentsResponse.ok) {
-      console.error(
-        'GitHub Comments API error:',
-        commentsResponse.status,
-        commentsResponse.statusText
-      )
-      return []
-    }
+        if (!commentsResponse.ok) {
+          console.error(
+            'GitHub Comments API error:',
+            commentsResponse.status,
+            commentsResponse.statusText
+          )
+          return []
+        }
 
-    const comments: GitHubComment[] = await commentsResponse.json()
-    console.log('Found comments:', comments.length)
+        const comments: GitHubComment[] = await commentsResponse.json()
+        console.log('Found comments:', comments.length)
 
-    // 4. GitHub 댓글을 블로그 댓글 형식으로 변환
-    return comments.map((comment) => ({
-      id: comment.id,
-      body: comment.body,
-      user: comment.user,
-      created_at: comment.created_at,
-      updated_at: comment.updated_at,
-    }))
+        // 4. Issue 본문도 댓글로 포함 (실제 댓글이 없을 때)
+        const allComments: GitHubComment[] = []
+        
+        // Issue 본문이 있고 "댓글을 작성해주세요:" 이후에 내용이 있으면 댓글로 추가
+        if (matchingIssue.body && matchingIssue.body.includes('댓글을 작성해주세요:')) {
+          const bodyParts = matchingIssue.body.split('댓글을 작성해주세요:')
+          if (bodyParts.length > 1 && bodyParts[1].trim()) {
+            allComments.push({
+              id: matchingIssue.id,
+              body: bodyParts[1].trim(),
+              user: matchingIssue.user,
+              created_at: matchingIssue.created_at,
+              updated_at: matchingIssue.updated_at,
+            })
+          }
+        }
+        
+        // 실제 댓글들 추가
+        allComments.push(...comments)
+
+        // 5. GitHub 댓글을 블로그 댓글 형식으로 변환
+        return allComments.map((comment) => ({
+          id: comment.id,
+          body: comment.body,
+          user: comment.user,
+          created_at: comment.created_at,
+          updated_at: comment.updated_at,
+        }))
   } catch (error) {
     console.error('Error fetching comments:', error)
     return []

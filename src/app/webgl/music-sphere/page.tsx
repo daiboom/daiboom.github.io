@@ -683,7 +683,7 @@ function Torus({
 
 export default function Page() {
   console.log('process.env', process.env.NODE_ENV)
-  // const fbx = useFBX('/assets/Mount_Fuji.fbx')
+  // const fbx = useFBX('/assets/Snowy_Mountains.fbx')
   // console.log(fbx)
   // const fbx = useLoader()
   const torus2 = {

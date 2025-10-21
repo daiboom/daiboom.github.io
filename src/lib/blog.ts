@@ -30,7 +30,8 @@ export const samplePosts: BlogPost[] = [
   {
     id: '1',
     title: 'React Three Fiber로 3D 웹 애플리케이션 만들기',
-    description: 'React Three Fiber를 사용하여 인터랙티브한 3D 웹 애플리케이션을 만드는 방법을 알아봅니다.',
+    description:
+      'React Three Fiber를 사용하여 인터랙티브한 3D 웹 애플리케이션을 만드는 방법을 알아봅니다.',
     content: `# React Three Fiber로 3D 웹 애플리케이션 만들기
 
 React Three Fiber는 Three.js를 React 컴포넌트로 사용할 수 있게 해주는 라이브러리입니다. 이를 통해 복잡한 3D 그래픽을 React의 선언적 방식으로 쉽게 구현할 수 있습니다.
@@ -67,7 +68,7 @@ function App() {
     category: 'Frontend',
     slug: 'react-three-fiber-3d-web-app',
     readTime: 8,
-    featured: true
+    featured: true,
   },
   {
     id: '2',
@@ -94,12 +95,13 @@ App Router가 이제 안정 버전으로 출시되었습니다.
     category: 'Frontend',
     slug: 'nextjs-14-new-features',
     readTime: 5,
-    featured: false
+    featured: false,
   },
   {
     id: '3',
     title: 'TypeScript 고급 타입 활용하기',
-    description: 'TypeScript의 고급 타입 기능들을 활용하여 더 안전하고 유지보수하기 쉬운 코드를 작성하는 방법을 알아봅니다.',
+    description:
+      'TypeScript의 고급 타입 기능들을 활용하여 더 안전하고 유지보수하기 쉬운 코드를 작성하는 방법을 알아봅니다.',
     content: `# TypeScript 고급 타입 활용하기
 
 TypeScript의 고급 타입 기능들을 제대로 활용하면 더 안전하고 유지보수하기 쉬운 코드를 작성할 수 있습니다.
@@ -134,8 +136,8 @@ type UserName = Pick<User, 'name'>
     category: 'Programming',
     slug: 'typescript-advanced-types',
     readTime: 12,
-    featured: true
-  }
+    featured: true,
+  },
 ]
 
 export const categories = [
@@ -144,7 +146,7 @@ export const categories = [
   'Backend',
   'Programming',
   'DevOps',
-  'Tools'
+  'Tools',
 ]
 
 export const tags = [
@@ -157,5 +159,5 @@ export const tags = [
   'Programming',
   'SSR',
   'Frontend',
-  'Backend'
+  'Backend',
 ]

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { BlogPost, categories, samplePosts, tags } from '@/lib/blog'
 import Link from 'next/link'
-import { samplePosts, categories, tags, BlogPost } from '@/lib/blog'
+import { useMemo, useState } from 'react'
 
 export default function BlogPage() {
   const [selectedCategory, setSelectedCategory] = useState('All')
@@ -10,19 +10,23 @@ export default function BlogPage() {
   const [searchQuery, setSearchQuery] = useState('')
 
   const filteredPosts = useMemo(() => {
-    return samplePosts.filter(post => {
-      const matchesCategory = selectedCategory === 'All' || post.category === selectedCategory
+    return samplePosts.filter((post) => {
+      const matchesCategory =
+        selectedCategory === 'All' || post.category === selectedCategory
       const matchesTag = selectedTag === '' || post.tags.includes(selectedTag)
-      const matchesSearch = searchQuery === '' || 
+      const matchesSearch =
+        searchQuery === '' ||
         post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         post.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-      
+        post.tags.some((tag) =>
+          tag.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+
       return matchesCategory && matchesTag && matchesSearch
     })
   }, [selectedCategory, selectedTag, searchQuery])
 
-  const featuredPosts = samplePosts.filter(post => post.featured)
+  const featuredPosts = samplePosts.filter((post) => post.featured)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -43,7 +47,10 @@ export default function BlogPage() {
             <div className="space-y-6">
               {/* Search */}
               <div>
-                <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="search"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   검색
                 </label>
                 <input
@@ -58,9 +65,11 @@ export default function BlogPage() {
 
               {/* Categories */}
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-3">카테고리</h3>
+                <h3 className="text-sm font-medium text-gray-700 mb-3">
+                  카테고리
+                </h3>
                 <div className="space-y-2">
-                  {categories.map(category => (
+                  {categories.map((category) => (
                     <button
                       key={category}
                       onClick={() => setSelectedCategory(category)}
@@ -80,10 +89,12 @@ export default function BlogPage() {
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-3">태그</h3>
                 <div className="flex flex-wrap gap-2">
-                  {tags.map(tag => (
+                  {tags.map((tag) => (
                     <button
                       key={tag}
-                      onClick={() => setSelectedTag(selectedTag === tag ? '' : tag)}
+                      onClick={() =>
+                        setSelectedTag(selectedTag === tag ? '' : tag)
+                      }
                       className={`px-2 py-1 rounded-full text-xs transition-colors ${
                         selectedTag === tag
                           ? 'bg-blue-100 text-blue-700'
@@ -101,22 +112,28 @@ export default function BlogPage() {
           {/* Main Content */}
           <div className="lg:col-span-3 mt-8 lg:mt-0">
             {/* Featured Posts */}
-            {selectedCategory === 'All' && selectedTag === '' && searchQuery === '' && (
-              <div className="mb-12">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">추천 포스트</h2>
-                <div className="grid gap-6 md:grid-cols-2">
-                  {featuredPosts.map(post => (
-                    <FeaturedPostCard key={post.id} post={post} />
-                  ))}
+            {selectedCategory === 'All' &&
+              selectedTag === '' &&
+              searchQuery === '' && (
+                <div className="mb-12">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                    추천 포스트
+                  </h2>
+                  <div className="grid gap-6 md:grid-cols-2">
+                    {featuredPosts.map((post) => (
+                      <FeaturedPostCard key={post.id} post={post} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* All Posts */}
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {selectedCategory === 'All' ? '모든 포스트' : selectedCategory}
+                  {selectedCategory === 'All'
+                    ? '모든 포스트'
+                    : selectedCategory}
                   {selectedTag && ` - ${selectedTag}`}
                   {searchQuery && ` - "${searchQuery}"`}
                 </h2>
@@ -126,7 +143,7 @@ export default function BlogPage() {
               </div>
 
               <div className="space-y-6">
-                {filteredPosts.map(post => (
+                {filteredPosts.map((post) => (
                   <PostCard key={post.id} post={post} />
                 ))}
               </div>
@@ -158,9 +175,7 @@ function FeaturedPostCard({ post }: { post: BlogPost }) {
           <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
             {post.title}
           </h3>
-          <p className="mt-2 text-gray-600 line-clamp-3">
-            {post.description}
-          </p>
+          <p className="mt-2 text-gray-600 line-clamp-3">{post.description}</p>
           <div className="mt-4 flex items-center justify-between">
             <div className="flex items-center space-x-4 text-sm text-gray-500">
               <span>{post.author}</span>
@@ -168,8 +183,11 @@ function FeaturedPostCard({ post }: { post: BlogPost }) {
               <span>{post.readTime}분 읽기</span>
             </div>
             <div className="flex space-x-1">
-              {post.tags.slice(0, 2).map(tag => (
-                <span key={tag} className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
+              {post.tags.slice(0, 2).map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-600"
+                >
                   {tag}
                 </span>
               ))}
@@ -190,7 +208,9 @@ function PostCard({ post }: { post: BlogPost }) {
             <div className="flex items-center space-x-2 mb-2">
               <span className="text-sm text-gray-500">{post.category}</span>
               <span className="text-gray-300">•</span>
-              <span className="text-sm text-gray-500">{post.readTime}분 읽기</span>
+              <span className="text-sm text-gray-500">
+                {post.readTime}분 읽기
+              </span>
             </div>
             <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors mb-2">
               {post.title}
@@ -204,13 +224,18 @@ function PostCard({ post }: { post: BlogPost }) {
                 <span>{post.publishedAt}</span>
               </div>
               <div className="flex space-x-1">
-                {post.tags.slice(0, 3).map(tag => (
-                  <span key={tag} className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
+                {post.tags.slice(0, 3).map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-600"
+                  >
                     {tag}
                   </span>
                 ))}
                 {post.tags.length > 3 && (
-                  <span className="text-xs text-gray-400">+{post.tags.length - 3}</span>
+                  <span className="text-xs text-gray-400">
+                    +{post.tags.length - 3}
+                  </span>
                 )}
               </div>
             </div>

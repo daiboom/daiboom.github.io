@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { BlogComment, BlogPost } from '@/lib/blog'
+import { getCommentUrl, getCommentsForPost } from '@/lib/github'
+import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
-import { BlogPost, BlogComment } from '@/lib/blog'
+import remarkGfm from 'remark-gfm'
 
 interface BlogPostClientProps {
   post: BlogPost
@@ -19,53 +20,67 @@ export default function BlogPostClient({ post }: BlogPostClientProps) {
   }, [])
 
   const loadComments = async () => {
-    // 실제로는 GitHub Issues API를 호출
-    // 여기서는 샘플 데이터 사용
-    const sampleComments: BlogComment[] = [
-      {
-        id: 1,
-        body: '정말 유용한 정보네요! React Three Fiber에 대해 더 알고 싶어졌습니다.',
-        user: {
-          login: 'developer1',
-          avatar_url: 'https://github.com/github.png',
-          html_url: 'https://github.com/developer1'
+    try {
+      // GitHub Issues API에서 실제 댓글 가져오기
+      const githubComments = await getCommentsForPost(post.title)
+      setComments(githubComments)
+    } catch (error) {
+      console.error('Failed to load comments:', error)
+      // 에러 발생 시 샘플 데이터 사용
+      const sampleComments: BlogComment[] = [
+        {
+          id: 1,
+          body: 'GitHub Issues API 연결 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+          user: {
+            login: 'system',
+            avatar_url: 'https://github.com/github.png',
+            html_url: 'https://github.com',
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         },
-        created_at: '2024-01-16T10:30:00Z',
-        updated_at: '2024-01-16T10:30:00Z'
-      },
-      {
-        id: 2,
-        body: '코드 예제가 정말 도움이 되었습니다. 감사합니다!',
-        user: {
-          login: 'developer2',
-          avatar_url: 'https://github.com/github.png',
-          html_url: 'https://github.com/developer2'
-        },
-        created_at: '2024-01-16T14:20:00Z',
-        updated_at: '2024-01-16T14:20:00Z'
-      }
-    ]
-    setComments(sampleComments)
-    setLoading(false)
+      ]
+      setComments(sampleComments)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-      <h3 className="text-2xl font-bold text-gray-900 mb-6">댓글 ({comments.length})</h3>
-      
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-2xl font-bold text-gray-900">
+          댓글 ({comments.length})
+        </h3>
+        <button
+          onClick={() => {
+            setLoading(true)
+            loadComments()
+          }}
+          disabled={loading}
+          className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200 disabled:opacity-50 transition-colors"
+        >
+          {loading ? '새로고침 중...' : '새로고침'}
+        </button>
+      </div>
+
       {/* Comment Form */}
       <div className="mb-8 p-4 bg-gray-50 rounded-lg">
         <p className="text-sm text-gray-600 mb-4">
           댓글을 작성하려면 GitHub Issues를 사용해주세요.
         </p>
         <a
-          href={`https://github.com/daiboom/daiboom.github.io/issues/new?title=댓글: ${post.title}&body=포스트: ${post.title}%0A%0A댓글을 작성해주세요:`}
+          href={getCommentUrl(post.title)}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
           <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z"
+              clipRule="evenodd"
+            />
           </svg>
           GitHub에서 댓글 작성하기
         </a>
@@ -79,8 +94,11 @@ export default function BlogPostClient({ post }: BlogPostClientProps) {
         </div>
       ) : (
         <div className="space-y-6">
-          {comments.map(comment => (
-            <div key={comment.id} className="border-b border-gray-200 pb-6 last:border-b-0">
+          {comments.map((comment) => (
+            <div
+              key={comment.id}
+              className="border-b border-gray-200 pb-6 last:border-b-0"
+            >
               <div className="flex items-start space-x-3">
                 <img
                   src={comment.user.avatar_url}

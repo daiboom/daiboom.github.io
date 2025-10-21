@@ -50,8 +50,11 @@ export async function getCommentsForPost(
     }
     
     // 토큰이 있으면 인증 헤더 추가
-    if (token) {
+    if (token && token !== 'your_fine_grained_token_here') {
       headers.Authorization = `token ${token}`
+      console.log('Using GitHub token for authentication')
+    } else {
+      console.log('No GitHub token found, using unauthenticated requests')
     }
 
     // 1. 해당 포스트와 관련된 Issue 찾기

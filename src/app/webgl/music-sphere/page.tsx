@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
-import { OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'
+import { OrbitControls, PerspectiveCamera, useGLTF, useFBX } from '@react-three/drei'
 import { Canvas, Euler, ThreeElements, useFrame } from '@react-three/fiber'
 import {
   Bloom,
@@ -26,6 +26,9 @@ function Model() {
     }
   )
 
+  // Snowy Mountains 모델 로드
+  const snowyMountains = useFBX('/assets/snowy_mountains/LowPoly.fbx')
+
   useEffect(() => {
     if (gltf.scene) {
       gltf.scene.traverse((child) => {
@@ -37,12 +40,34 @@ function Model() {
     }
   }, [gltf])
 
+  useEffect(() => {
+    if (snowyMountains) {
+      snowyMountains.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.castShadow = true
+          child.receiveShadow = true
+        }
+      })
+    }
+  }, [snowyMountains])
+
   return (
-    <primitive
-      object={gltf.scene as any}
-      scale={0.002}
-      position={[0, -10, 0]}
-    />
+    <group>
+      {/* 기존 Valley 모델 */}
+      <primitive
+        object={gltf.scene as any}
+        scale={0.002}
+        position={[0, -10, 0]}
+      />
+      
+      {/* Snowy Mountains 모델 */}
+      <primitive
+        object={snowyMountains}
+        scale={0.1}
+        position={[0, -5, 0]}
+        rotation={[0, Math.PI / 4, 0]}
+      />
+    </group>
   )
 }
 
@@ -683,9 +708,6 @@ function Torus({
 
 export default function Page() {
   console.log('process.env', process.env.NODE_ENV)
-  // const fbx = useFBX('/assets/Snowy_Mountains.fbx')
-  // console.log(fbx)
-  // const fbx = useLoader()
   const torus2 = {
     scale: 1.2,
   }

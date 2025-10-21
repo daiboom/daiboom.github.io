@@ -36,55 +36,77 @@ export interface GitHubComment {
 }
 
 // GitHub Issues API에서 댓글 가져오기
-export async function getCommentsForPost(postTitle: string): Promise<BlogComment[]> {
+export async function getCommentsForPost(
+  postTitle: string
+): Promise<BlogComment[]> {
   try {
     console.log('Fetching issues for post:', postTitle)
-    
+
     // 1. 해당 포스트와 관련된 Issue 찾기
     const issuesResponse = await fetch(
       `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues?state=all&per_page=100`,
       {
         headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'daiboom-blog'
-        }
+          Accept: 'application/vnd.github.v3+json',
+          'User-Agent': 'daiboom-blog',
+        },
       }
     )
 
     if (!issuesResponse.ok) {
-      console.error('GitHub API error:', issuesResponse.status, issuesResponse.statusText)
+      console.error(
+        'GitHub API error:',
+        issuesResponse.status,
+        issuesResponse.statusText
+      )
       return []
     }
 
     const issues: GitHubIssue[] = await issuesResponse.json()
     console.log('Found issues:', issues.length)
-    
+
     // 2. 포스트 제목과 매칭되는 Issue 찾기
-    const matchingIssue = issues.find(issue => {
-      const titleMatch = issue.title.includes(`댓글: ${postTitle}`) || 
-                        issue.title.includes(postTitle)
-      console.log(`Checking issue "${issue.title}" against "${postTitle}":`, titleMatch)
+    const matchingIssue = issues.find((issue) => {
+      const titleMatch =
+        issue.title.includes(`댓글: ${postTitle}`) ||
+        issue.title.includes(postTitle)
+      console.log(
+        `Checking issue "${issue.title}" against "${postTitle}":`,
+        titleMatch
+      )
       return titleMatch
     })
 
     if (!matchingIssue) {
       console.log(`No matching issue found for post: ${postTitle}`)
-      console.log('Available issues:', issues.map(i => i.title))
+      console.log(
+        'Available issues:',
+        issues.map((i) => i.title)
+      )
       return []
     }
 
-    console.log('Found matching issue:', matchingIssue.title, 'Comments:', matchingIssue.comments)
+    console.log(
+      'Found matching issue:',
+      matchingIssue.title,
+      'Comments:',
+      matchingIssue.comments
+    )
 
     // 3. Issue의 댓글들 가져오기
     const commentsResponse = await fetch(matchingIssue.comments_url, {
       headers: {
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'daiboom-blog'
-      }
+        Accept: 'application/vnd.github.v3+json',
+        'User-Agent': 'daiboom-blog',
+      },
     })
 
     if (!commentsResponse.ok) {
-      console.error('GitHub Comments API error:', commentsResponse.status, commentsResponse.statusText)
+      console.error(
+        'GitHub Comments API error:',
+        commentsResponse.status,
+        commentsResponse.statusText
+      )
       return []
     }
 
@@ -92,14 +114,13 @@ export async function getCommentsForPost(postTitle: string): Promise<BlogComment
     console.log('Found comments:', comments.length)
 
     // 4. GitHub 댓글을 블로그 댓글 형식으로 변환
-    return comments.map(comment => ({
+    return comments.map((comment) => ({
       id: comment.id,
       body: comment.body,
       user: comment.user,
       created_at: comment.created_at,
-      updated_at: comment.updated_at
+      updated_at: comment.updated_at,
     }))
-
   } catch (error) {
     console.error('Error fetching comments:', error)
     return []
@@ -107,7 +128,9 @@ export async function getCommentsForPost(postTitle: string): Promise<BlogComment
 }
 
 // 특정 포스트의 댓글 수 가져오기
-export async function getCommentCountForPost(postTitle: string): Promise<number> {
+export async function getCommentCountForPost(
+  postTitle: string
+): Promise<number> {
   const comments = await getCommentsForPost(postTitle)
   return comments.length
 }
@@ -119,9 +142,9 @@ export async function getAllCommentCounts(): Promise<Record<string, number>> {
       `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues?state=all&per_page=100`,
       {
         headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'daiboom-blog'
-        }
+          Accept: 'application/vnd.github.v3+json',
+          'User-Agent': 'daiboom-blog',
+        },
       }
     )
 
@@ -151,6 +174,8 @@ export async function getAllCommentCounts(): Promise<Record<string, number>> {
 export function getCommentUrl(postTitle: string): string {
   const issueTitle = `댓글: ${postTitle}`
   const issueBody = `포스트: ${postTitle}\n\n댓글을 작성해주세요:`
-  
-  return `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/issues/new?title=${encodeURIComponent(issueTitle)}&body=${encodeURIComponent(issueBody)}`
+
+  return `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/issues/new?title=${encodeURIComponent(
+    issueTitle
+  )}&body=${encodeURIComponent(issueBody)}`
 }

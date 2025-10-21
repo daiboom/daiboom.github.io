@@ -22,11 +22,30 @@ export default function BlogPostClient({ post }: BlogPostClientProps) {
   const loadComments = async () => {
     try {
       console.log('Loading comments for post:', post.title)
-      
+
       // GitHub Issues API에서 직접 댓글 가져오기
       const githubComments = await getCommentsForPost(post.title)
       console.log('GitHub comments:', githubComments)
-      setComments(githubComments)
+      
+      // 댓글이 없을 때 샘플 댓글 표시 (개발/테스트용)
+      if (githubComments.length === 0) {
+        const sampleComments: BlogComment[] = [
+          {
+            id: 999,
+            body: '아직 댓글이 없습니다. GitHub Issues에서 첫 번째 댓글을 작성해보세요!',
+            user: {
+              login: 'system',
+              avatar_url: 'https://github.com/github.png',
+              html_url: 'https://github.com',
+            },
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ]
+        setComments(sampleComments)
+      } else {
+        setComments(githubComments)
+      }
     } catch (error) {
       console.error('Failed to load comments:', error)
       // 에러 발생 시 샘플 데이터 사용
@@ -69,8 +88,12 @@ export default function BlogPostClient({ post }: BlogPostClientProps) {
 
       {/* Comment Form */}
       <div className="mb-8 p-4 bg-gray-50 rounded-lg">
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-gray-600 mb-2">
           댓글을 작성하려면 GitHub Issues를 사용해주세요.
+        </p>
+        <p className="text-xs text-gray-500 mb-4">
+          💡 <strong>사용법:</strong> 버튼을 클릭하면 GitHub Issues 페이지로 이동합니다. 
+          Issue에 댓글을 작성한 후 이 페이지에서 "새로고침" 버튼을 눌러주세요.
         </p>
         <a
           href={getCommentUrl(post.title)}

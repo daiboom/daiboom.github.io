@@ -7,6 +7,9 @@ import {
   Bloom,
   ChromaticAberration,
   EffectComposer,
+  Glitch,
+  Noise,
+  Vignette,
 } from '@react-three/postprocessing'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -14,7 +17,7 @@ import { DRACOLoader } from 'three-stdlib'
 
 function Model() {
   const gltf = useGLTF(
-    '/assets/vallee_de_nevache_france/scene.gltf',
+    '/assets/snowy_mountain_-_terrain/scene.gltf',
     true,
     undefined,
     (loader) => {
@@ -27,15 +30,46 @@ function Model() {
   )
 
   useEffect(() => {
+    console.log('🏔️ Snowy Mountain GLTF loaded:', gltf)
+
     if (gltf.scene) {
+      console.log('📊 Model info:', {
+        children: gltf.scene.children.length,
+        type: gltf.scene.type,
+        name: gltf.scene.name,
+        position: gltf.scene.position,
+        scale: gltf.scene.scale,
+        boundingBox: gltf.scene.getBoundingBox
+          ? gltf.scene.getBoundingBox()
+          : 'No bounding box',
+      })
+
+      // 모델을 원점으로 이동
+      gltf.scene.position.set(-20, 10, 0)
+      gltf.scene.scale.set(200, 200, 200)
+      console.log('🎯 Model reset to origin')
+
       gltf.scene.traverse((child) => {
+        console.log('🔍 Child:', child.type, child.name, {
+          position: child.position,
+          scale: child.scale,
+          visible: child.visible,
+        })
         if (child instanceof THREE.Mesh) {
-          child.castShadow = true
-          child.receiveShadow = true
+          child.castShadow = false
+          child.receiveShadow = false
+          console.log('✅ Mesh shadow disabled:', child.name)
         }
       })
+    } else {
+      console.log('❌ GLTF scene not loaded')
     }
   }, [gltf])
+
+  if (!gltf.scene) {
+    console.log('⏳ Loading Snowy Mountain model...')
+    return null
+  }
 
   return (
     <primitive
@@ -46,8 +80,8 @@ function Model() {
   )
 }
 
-// 프리로드 경로도 수정
-useGLTF.preload('/assets/vallee_de_nevache_france/scene.gltf')
+// 프리로드 경로 수정
+useGLTF.preload('/assets/snowy_mountain_-_terrain/scene.gltf')
 
 // 눈보라 효과 컴포넌트
 function SnowStorm() {
@@ -319,17 +353,49 @@ function AudioControlPanel({
   isLoading: boolean
 }) {
   return (
-    <div className="absolute top-4 right-4 z-10 flex gap-2">
+    <div
+      style={{
+        position: 'fixed',
+        top: '16px',
+        right: '16px',
+        zIndex: 9999,
+        display: 'flex',
+        gap: '8px',
+      }}
+    >
       <button
         onClick={isPlaying ? onStopAudio : onStartAudio}
         disabled={isLoading}
-        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-          isLoading
-            ? 'bg-gray-400 text-white cursor-not-allowed'
+        style={{
+          padding: '8px 16px',
+          borderRadius: '8px',
+          fontWeight: '500',
+          transition: 'all 0.2s',
+          backgroundColor: isLoading
+            ? '#9ca3af'
             : isPlaying
-            ? 'bg-red-500 text-white hover:bg-red-600'
-            : 'bg-purple-500 text-white hover:bg-purple-600'
-        }`}
+            ? '#ef4444'
+            : '#8b5cf6',
+          color: 'white',
+          border: 'none',
+          cursor: isLoading ? 'not-allowed' : 'pointer',
+          fontSize: '14px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        }}
+        onMouseEnter={(e) => {
+          if (!isLoading) {
+            e.currentTarget.style.backgroundColor = isPlaying
+              ? '#dc2626'
+              : '#7c3aed'
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isLoading) {
+            e.currentTarget.style.backgroundColor = isPlaying
+              ? '#ef4444'
+              : '#8b5cf6'
+          }
+        }}
       >
         {isLoading ? '⏳ 로딩...' : isPlaying ? '⏸️ 정지' : '🎵 LoFi 음악 재생'}
       </button>
@@ -345,7 +411,7 @@ function Sphere(props: ThreeElements['mesh'] & { audioData?: any }) {
   const [hovered, hover] = useState(false)
   const [clicked, click] = useState(false)
 
-  useFrame(() => {
+  useFrame((state) => {
     if (
       ref.current &&
       glowRef.current &&
@@ -360,33 +426,49 @@ function Sphere(props: ThreeElements['mesh'] & { audioData?: any }) {
       ref.current.scale.setScalar(finalScale)
       glowRef.current.scale.setScalar(finalScale * 1.1)
 
-      // 오디오 주파수에 따른 색상 변화
-      if (props.audioData.volume > 0) {
-        // 주파수에 따른 색상 변화
-        const bassIntensity = Math.max(0.3, props.audioData.bass / 255) // 최소 0.3 보장
-        const midIntensity = Math.max(0.3, props.audioData.mid / 255) // 최소 0.3 보장
-        const trebleIntensity = Math.max(0.3, props.audioData.treble / 255) // 최소 0.3 보장
+      // 시간에 따른 스펙트럼 색상 변화
+      const time = state.clock.elapsedTime
+      const spectrumHue = (time * 0.1) % 1 // 0~1 사이의 색상값 (HSV)
 
-        // RGB 색상 계산 (베이스=빨강, 미드=초록, 트레블=파랑)
-        const audioColor = new THREE.Color(
-          bassIntensity,
-          midIntensity,
-          trebleIntensity
+      // 오디오 반응형 색상 강도
+      if (props.audioData.volume > 0) {
+        // 주파수에 따른 색상 강도 계산
+        const bassIntensity = Math.max(0.5, props.audioData.bass / 255)
+        const midIntensity = Math.max(0.5, props.audioData.mid / 255)
+        const trebleIntensity = Math.max(0.5, props.audioData.treble / 255)
+
+        // 평균 강도로 색상 밝기 조절
+        const avgIntensity =
+          (bassIntensity + midIntensity + trebleIntensity) / 3
+
+        // HSV에서 RGB로 변환 (스펙트럼 색상)
+        const spectrumColor = new THREE.Color().setHSL(
+          spectrumHue,
+          1.0,
+          Math.max(0.7, avgIntensity)
         )
 
         // 호버 상태에 따른 색상 결정
-        const finalColor = hovered ? audioColor : audioColor
-        const finalEmissive = hovered ? audioColor : audioColor
+        const finalColor = hovered
+          ? spectrumColor.clone().multiplyScalar(1.2)
+          : spectrumColor
+        const finalEmissive = hovered
+          ? spectrumColor.clone().multiplyScalar(1.1)
+          : spectrumColor
 
         materialRef.current.color = finalColor
         materialRef.current.emissive = finalEmissive
         glowMaterialRef.current.color = finalColor
       } else {
-        // 오디오가 없을 때는 기본 색상
-        const defaultColor = hovered ? '#ff00ff' : '#ff9933'
-        materialRef.current.color = new THREE.Color(defaultColor)
-        materialRef.current.emissive = new THREE.Color(defaultColor)
-        glowMaterialRef.current.color = new THREE.Color(defaultColor)
+        // 오디오가 없을 때는 기본 스펙트럼 색상
+        const defaultSpectrumColor = new THREE.Color().setHSL(
+          spectrumHue,
+          1.0,
+          0.8
+        )
+        materialRef.current.color = defaultSpectrumColor
+        materialRef.current.emissive = defaultSpectrumColor
+        glowMaterialRef.current.color = defaultSpectrumColor
       }
     }
   })
@@ -405,9 +487,9 @@ function Sphere(props: ThreeElements['mesh'] & { audioData?: any }) {
         <sphereGeometry args={[1.1, 28, 28]} />
         <meshStandardMaterial
           ref={materialRef}
-          color="#ff9933"
-          emissive="#ff9933"
-          emissiveIntensity={2}
+          color="#ffb366"
+          emissive="#ffb366"
+          emissiveIntensity={0.8}
           toneMapped={false}
         />
       </mesh>
@@ -417,9 +499,9 @@ function Sphere(props: ThreeElements['mesh'] & { audioData?: any }) {
         <sphereGeometry args={[1, 28, 28]} />
         <meshBasicMaterial
           ref={glowMaterialRef}
-          color="#ff9933"
+          color="#ffb366"
           transparent
-          opacity={0.3}
+          opacity={0.2}
           side={THREE.BackSide}
           toneMapped={false}
         />
@@ -428,37 +510,101 @@ function Sphere(props: ThreeElements['mesh'] & { audioData?: any }) {
   )
 }
 
+// 마우스 이동 감지 및 바람 효과 컴포넌트
+function WindEffect({
+  mousePosition,
+  mouseVelocity,
+}: {
+  mousePosition: [number, number]
+  mouseVelocity: number
+}) {
+  const [windIntensity, setWindIntensity] = useState(0)
+  const [noiseIntensity, setNoiseIntensity] = useState(0)
+  const [vignetteIntensity, setVignetteIntensity] = useState(0)
+  const [glitchIntensity, setGlitchIntensity] = useState(0)
+  const [chromaticOffset, setChromaticOffset] = useState([0, 0])
+
+  useFrame((state) => {
+    // 마우스 속도에 따른 바람 효과
+    if (mouseVelocity > 0.01) {
+      // 마우스가 빠르게 움직일 때 바람 효과 활성화
+      const windStrength = Math.min(mouseVelocity * 2, 1)
+
+      // 시간에 따른 바람 파동 효과
+      const windWave = Math.sin(state.clock.elapsedTime * 10) * 0.5 + 0.5
+
+      setWindIntensity(windStrength * windWave)
+      setNoiseIntensity(windStrength * 0.8 * windWave)
+      setVignetteIntensity(windStrength * 0.3 * windWave)
+      setGlitchIntensity(windStrength * 0.2 * windWave)
+
+      // 마우스 방향에 따른 색수차 효과
+      const chromaticStrength = windStrength * 0.01
+      setChromaticOffset([
+        mousePosition[0] * chromaticStrength,
+        mousePosition[1] * chromaticStrength,
+      ])
+    } else {
+      // 마우스가 멈추면 효과가 서서히 사라짐
+      setWindIntensity((prev) => Math.max(0, prev - 0.05))
+      setNoiseIntensity((prev) => Math.max(0, prev - 0.05))
+      setVignetteIntensity((prev) => Math.max(0, prev - 0.05))
+      setGlitchIntensity((prev) => Math.max(0, prev - 0.05))
+      setChromaticOffset([0, 0])
+    }
+  })
+
+  return (
+    <>
+      {windIntensity > 0 && (
+        <>
+          <Noise opacity={noiseIntensity} premultiply />
+          <Vignette eskil={false} offset={0.1} darkness={vignetteIntensity} />
+          <Glitch
+            delay={[1.5, 3.5]}
+            duration={[0.6, 1.0]}
+            strength={[0.3, 1.0]}
+            mode={0}
+            active={glitchIntensity > 0.1}
+          />
+          <ChromaticAberration offset={chromaticOffset} />
+        </>
+      )}
+    </>
+  )
+}
+
 // 오디오 반응형 Bloom 효과 컴포넌트
 function AudioReactiveBloom({ audioData }: { audioData: any }) {
-  const [bloomIntensity, setBloomIntensity] = useState(2.0)
-  const [bloomThreshold, setBloomThreshold] = useState(0.2)
-  const [bloomRadius, setBloomRadius] = useState(0.8)
+  const [bloomIntensity, setBloomIntensity] = useState(1.0)
+  const [bloomThreshold, setBloomThreshold] = useState(0.8)
+  const [bloomRadius, setBloomRadius] = useState(0.3)
 
   useFrame(() => {
     if (audioData.volume > 0) {
-      // 오디오 볼륨에 따른 Bloom 강도 변화
-      const volumeIntensity = 2.0 + (audioData.volume / 255) * 3.0 // 2.0 ~ 5.0
+      // 오디오 볼륨에 따른 Bloom 강도 변화 (더 약하게)
+      const volumeIntensity = 1.0 + (audioData.volume / 255) * 1.0 // 1.0 ~ 2.0
 
-      // 주파수에 따른 Bloom 임계값 변화 (색상에 영향)
+      // 주파수에 따른 Bloom 임계값 변화 (더 높은 임계값)
       const bassIntensity = Math.max(0.1, audioData.bass / 255)
       const midIntensity = Math.max(0.1, audioData.mid / 255)
       const trebleIntensity = Math.max(0.1, audioData.treble / 255)
 
-      // 주파수에 따른 Bloom 반경 변화 (색상 분산에 영향)
+      // 주파수에 따른 Bloom 반경 변화 (더 작은 반경)
       const frequencyRadius =
-        0.5 + ((bassIntensity + midIntensity + trebleIntensity) / 3) * 1.0
+        0.2 + ((bassIntensity + midIntensity + trebleIntensity) / 3) * 0.3
 
-      // 동적 임계값 (주파수에 따라 변화)
-      const dynamicThreshold = 0.1 + (audioData.volume / 255) * 0.3
+      // 동적 임계값 (더 높은 임계값으로 바닥 빛 방지)
+      const dynamicThreshold = 0.7 + (audioData.volume / 255) * 0.2
 
       setBloomIntensity(volumeIntensity)
       setBloomThreshold(dynamicThreshold)
       setBloomRadius(frequencyRadius)
     } else {
-      // 오디오가 없을 때는 기본값
-      setBloomIntensity(2.0)
-      setBloomThreshold(0.2)
-      setBloomRadius(0.8)
+      // 오디오가 없을 때는 기본값 (더 약하게)
+      setBloomIntensity(1.0)
+      setBloomThreshold(0.8)
+      setBloomRadius(0.3)
     }
   })
 
@@ -562,65 +708,40 @@ function Torus({
       torusRef.current.scale.setScalar(finalScale)
       glowRef.current.scale.setScalar(finalScale * 1.1)
 
+      // 시간에 따른 스펙트럼 색상 변화
+      const time = state.clock.elapsedTime
+      const spectrumHue = (time * 0.1) % 1 // 0~1 사이의 색상값 (HSV)
+
       // 오디오 반응형 색상 변화
       if (audioData.volume > 0) {
-        let audioColor: THREE.Color
+        // 주파수 대역별 색상 강도 계산
+        const frequencyIntensity = getFrequencyIntensity(frequencyBand)
 
-        // 주파수 대역별 색상 매핑
-        switch (frequencyBand) {
-          case 'bass':
-            audioColor = new THREE.Color(
-              Math.max(0.3, audioData.bass / 255), // 빨강
-              0.2,
-              0.2
-            )
-            break
-          case 'lowMid':
-            audioColor = new THREE.Color(
-              Math.max(0.3, audioData.bass / 255), // 빨강
-              Math.max(0.3, audioData.mid / 255), // 초록
-              0.2
-            )
-            break
-          case 'mid':
-            audioColor = new THREE.Color(
-              0.2,
-              Math.max(0.3, audioData.mid / 255), // 초록
-              0.2
-            )
-            break
-          case 'highMid':
-            audioColor = new THREE.Color(
-              0.2,
-              Math.max(0.3, audioData.mid / 255), // 초록
-              Math.max(0.3, audioData.treble / 255) // 파랑
-            )
-            break
-          case 'treble':
-            audioColor = new THREE.Color(
-              0.2,
-              0.2,
-              Math.max(0.3, audioData.treble / 255) // 파랑
-            )
-            break
-          default:
-            audioColor = new THREE.Color(0.5, 0.5, 0.5)
-        }
+        // HSV에서 RGB로 변환 (스펙트럼 색상)
+        const spectrumColor = new THREE.Color().setHSL(
+          spectrumHue,
+          1.0,
+          Math.max(0.7, frequencyIntensity)
+        )
 
-        materialRef.current.color = audioColor
-        materialRef.current.emissive = audioColor
-        glowMaterialRef.current.color = audioColor
+        materialRef.current.color = spectrumColor
+        materialRef.current.emissive = spectrumColor
+        glowMaterialRef.current.color = spectrumColor
 
         // 오디오 반응형 발광 강도
-        const emissiveIntensity = 2 + (audioData.volume / 255) * 3 // 2 ~ 5
+        const emissiveIntensity = 0.8 + (audioData.volume / 255) * 0.8 // 0.8 ~ 1.6
         materialRef.current.emissiveIntensity = emissiveIntensity
       } else {
-        // 오디오가 없을 때는 기본 색상
-        const defaultColor = new THREE.Color(color)
-        materialRef.current.color = defaultColor
-        materialRef.current.emissive = defaultColor
-        materialRef.current.emissiveIntensity = 2
-        glowMaterialRef.current.color = new THREE.Color(glowColor)
+        // 오디오가 없을 때는 기본 스펙트럼 색상
+        const defaultSpectrumColor = new THREE.Color().setHSL(
+          spectrumHue,
+          1.0,
+          0.8
+        )
+        materialRef.current.color = defaultSpectrumColor
+        materialRef.current.emissive = defaultSpectrumColor
+        materialRef.current.emissiveIntensity = 1.2
+        glowMaterialRef.current.color = defaultSpectrumColor
       }
 
       // 오디오 반응형 위치 변화 (파동 효과)
@@ -655,7 +776,7 @@ function Torus({
           ref={materialRef}
           color={color}
           emissive={color}
-          emissiveIntensity={2}
+          emissiveIntensity={1.2}
           toneMapped={false}
         />
       </mesh>
@@ -690,12 +811,43 @@ export default function Page() {
     scale: 1.2,
   }
 
+  // 마우스 위치 및 속도 상태
+  const [mousePosition, setMousePosition] = useState<[number, number]>([0, 0])
+  const [mouseVelocity, setMouseVelocity] = useState(0)
+  const lastMousePosition = useRef<[number, number]>([0, 0])
+  const lastTime = useRef(Date.now())
+
+  // 마우스 이벤트 핸들러
+  const handleMouseMove = (event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = (event.clientX - rect.left) / rect.width
+    const y = (event.clientY - rect.top) / rect.height
+    // 정규화된 좌표 (-1 ~ 1)
+    const normalizedX = (x - 0.5) * 2
+    const normalizedY = (y - 0.5) * 2
+
+    const currentTime = Date.now()
+    const deltaTime = (currentTime - lastTime.current) / 1000 // 초 단위
+
+    // 마우스 속도 계산
+    const deltaX = normalizedX - lastMousePosition.current[0]
+    const deltaY = normalizedY - lastMousePosition.current[1]
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+    const velocity = deltaTime > 0 ? distance / deltaTime : 0
+
+    setMousePosition([normalizedX, normalizedY])
+    setMouseVelocity(velocity)
+
+    lastMousePosition.current = [normalizedX, normalizedY]
+    lastTime.current = currentTime
+  }
+
   // 오디오 분석 훅 사용
   const { audioData, startAudioAnalysis, stopAudio, isPlaying, isLoading } =
     useAudioAnalyzer()
 
   return (
-    <div className="h-screen relative">
+    <div className="h-screen relative" onMouseMove={handleMouseMove}>
       {/* 오디오 컨트롤 패널 */}
       <AudioControlPanel
         onStartAudio={startAudioAnalysis}
@@ -703,11 +855,10 @@ export default function Page() {
         isPlaying={isPlaying}
         isLoading={isLoading}
       />
-      <Canvas shadows fallback={<div>Sorry no WebGL supported!</div>}>
-        <color attach="background" args={['#e8f4f8']} />
-        <fogExp2 attach="fog" args={['#ffffff', 0.003]} />
+      <Canvas fallback={<div>Sorry no WebGL supported!</div>}>
+        <fogExp2 attach="fog" args={['#e6f3ff', 0.002]} />
 
-        <PerspectiveCamera makeDefault position={[45, 45, 45]} zoom={3} />
+        <PerspectiveCamera makeDefault position={[20, 20, 20]} zoom={1} />
         <OrbitControls
           minDistance={15}
           maxDistance={75}
@@ -724,15 +875,15 @@ export default function Page() {
 
         <SnowStorm />
 
-        <ambientLight intensity={Math.PI / 2} />
+        <ambientLight intensity={0.3} />
         <directionalLight
-          position={[5, 5, 5]}
-          intensity={1}
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
+          position={[10, 10, 5]}
+          intensity={0.4}
+          castShadow={false}
+          color="#fff8dc"
         />
-        <pointLight position={[-5, -5, -5]} intensity={0.5} />
+        <pointLight position={[-5, -5, -5]} intensity={0.1} color="#e6f3ff" />
+        <pointLight position={[0, 15, 0]} intensity={0.15} color="#f0f8ff" />
         <group scale={1}>
           <spotLight
             position={[10, 10, 10]}
@@ -775,6 +926,10 @@ export default function Page() {
         ) : null}
         <EffectComposer>
           <AudioReactiveBloom audioData={audioData} />
+          <WindEffect
+            mousePosition={mousePosition}
+            mouseVelocity={mouseVelocity}
+          />
         </EffectComposer>
       </Canvas>
     </div>

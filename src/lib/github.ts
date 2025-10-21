@@ -42,20 +42,25 @@ export async function getCommentsForPost(
   try {
     console.log('🔍 [GitHub API] Fetching issues for post:', postTitle)
 
-    // GitHub Personal Access Token (환경변수에서 가져오기)
-    const token = process.env.NEXT_PUBLIC_GITHUB_TOKEN
+    // GitHub Personal Access Token (서버 사이드에서만 사용)
+    const token = process.env.GITHUB_TOKEN
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github.v3+json',
       'User-Agent': 'daiboom-blog',
     }
-    
+
     // 토큰이 있으면 인증 헤더 추가
     if (token && token !== 'your_fine_grained_token_here') {
       headers.Authorization = `token ${token}`
       console.log('✅ [GitHub API] Using GitHub token for authentication')
     } else {
-      console.log('⚠️ [GitHub API] No GitHub token found, using unauthenticated requests')
-      console.log('🔧 [GitHub API] Token value:', token ? 'Present but invalid' : 'Not found')
+      console.log(
+        '⚠️ [GitHub API] No GitHub token found, using unauthenticated requests'
+      )
+      console.log(
+        '🔧 [GitHub API] Token value:',
+        token ? 'Present but invalid' : 'Not found'
+      )
     }
 
     // 1. 해당 포스트와 관련된 Issue 찾기
@@ -110,23 +115,23 @@ export async function getCommentsForPost(
       matchingIssue.comments
     )
 
-        // 3. Issue의 댓글들 가져오기
-        const commentsResponse = await fetch(matchingIssue.comments_url, {
-          headers,
-        })
+    // 3. Issue의 댓글들 가져오기
+    const commentsResponse = await fetch(matchingIssue.comments_url, {
+      headers,
+    })
 
-        if (!commentsResponse.ok) {
-          if (commentsResponse.status === 403) {
-            console.error('GitHub API rate limit exceeded. Please try again later.')
-            return []
-          }
-          console.error(
-            'GitHub Comments API error:',
-            commentsResponse.status,
-            commentsResponse.statusText
-          )
-          return []
-        }
+    if (!commentsResponse.ok) {
+      if (commentsResponse.status === 403) {
+        console.error('GitHub API rate limit exceeded. Please try again later.')
+        return []
+      }
+      console.error(
+        'GitHub Comments API error:',
+        commentsResponse.status,
+        commentsResponse.statusText
+      )
+      return []
+    }
 
     const comments: GitHubComment[] = await commentsResponse.json()
     console.log('Found comments:', comments.length)

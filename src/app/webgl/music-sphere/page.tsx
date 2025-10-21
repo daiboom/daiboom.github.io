@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
-import { OrbitControls, PerspectiveCamera, useGLTF, useFBX } from '@react-three/drei'
+import {
+  OrbitControls,
+  PerspectiveCamera,
+  useFBX,
+} from '@react-three/drei'
 import { Canvas, Euler, ThreeElements, useFrame } from '@react-three/fiber'
 import {
   Bloom,
@@ -10,35 +14,10 @@ import {
 } from '@react-three/postprocessing'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
-import { DRACOLoader } from 'three-stdlib'
 
 function Model() {
-  const gltf = useGLTF(
-    '/assets/vallee_de_nevache_france/scene.gltf',
-    true,
-    undefined,
-    (loader) => {
-      const dracoLoader = new DRACOLoader()
-      dracoLoader.setDecoderPath(
-        'https://www.gstatic.com/draco/versioned/decoders/1.5.6/'
-      )
-      loader.setDRACOLoader(dracoLoader)
-    }
-  )
-
-  // Snowy Mountains 모델 로드
+  // Snowy Mountains 모델만 로드
   const snowyMountains = useFBX('/assets/snowy_mountains/LowPoly.fbx')
-
-  useEffect(() => {
-    if (gltf.scene) {
-      gltf.scene.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.castShadow = true
-          child.receiveShadow = true
-        }
-      })
-    }
-  }, [gltf])
 
   useEffect(() => {
     if (snowyMountains) {
@@ -52,27 +31,17 @@ function Model() {
   }, [snowyMountains])
 
   return (
-    <group>
-      {/* 기존 Valley 모델 */}
-      <primitive
-        object={gltf.scene as any}
-        scale={0.002}
-        position={[0, -10, 0]}
-      />
-      
-      {/* Snowy Mountains 모델 */}
-      <primitive
-        object={snowyMountains}
-        scale={0.1}
-        position={[0, -5, 0]}
-        rotation={[0, Math.PI / 4, 0]}
-      />
-    </group>
+    <primitive
+      object={snowyMountains}
+      scale={0.1}
+      position={[0, -5, 0]}
+      rotation={[0, Math.PI / 4, 0]}
+    />
   )
 }
 
-// 프리로드 경로도 수정
-useGLTF.preload('/assets/vallee_de_nevache_france/scene.gltf')
+// Snowy Mountains 모델 프리로드
+useFBX.preload('/assets/snowy_mountains/LowPoly.fbx')
 
 // 눈보라 효과 컴포넌트
 function SnowStorm() {

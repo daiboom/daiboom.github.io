@@ -76,7 +76,7 @@ jobs:
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} next build
         env:
-          NEXT_PUBLIC_GITHUB_TOKEN: ${{ secrets.PAGES_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAGES_TOKEN }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

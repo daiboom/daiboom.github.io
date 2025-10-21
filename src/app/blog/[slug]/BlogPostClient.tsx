@@ -26,13 +26,13 @@ export default function BlogPostClient({ post }: BlogPostClientProps) {
       // GitHub Issues API에서 직접 댓글 가져오기
       const githubComments = await getCommentsForPost(post.title)
       console.log('GitHub comments:', githubComments)
-      
+
       // 댓글이 없을 때 샘플 댓글 표시 (개발/테스트용)
       if (githubComments.length === 0) {
         const sampleComments: BlogComment[] = [
           {
             id: 999,
-            body: '아직 댓글이 없습니다. GitHub Issues에서 첫 번째 댓글을 작성해보세요!',
+            body: `**아직 댓글이 없습니다!** 🎯\n\n이 포스트에 대한 첫 번째 댓글을 작성해보세요:\n\n1. 아래 "GitHub에서 댓글 작성하기" 버튼 클릭\n2. GitHub Issues 페이지에서 댓글 작성\n3. 이 페이지에서 "새로고침" 버튼 클릭\n\n댓글을 작성하면 여기에 표시됩니다!`,
             user: {
               login: 'system',
               avatar_url: 'https://github.com/github.png',
@@ -92,8 +92,9 @@ export default function BlogPostClient({ post }: BlogPostClientProps) {
           댓글을 작성하려면 GitHub Issues를 사용해주세요.
         </p>
         <p className="text-xs text-gray-500 mb-4">
-          💡 <strong>사용법:</strong> 버튼을 클릭하면 GitHub Issues 페이지로 이동합니다. 
-          Issue에 댓글을 작성한 후 이 페이지에서 "새로고침" 버튼을 눌러주세요.
+          💡 <strong>사용법:</strong> 버튼을 클릭하면 GitHub Issues 페이지로
+          이동합니다. Issue에 댓글을 작성한 후 이 페이지에서 "새로고침" 버튼을
+          눌러주세요.
         </p>
         <a
           href={getCommentUrl(post.title)}
@@ -108,7 +109,7 @@ export default function BlogPostClient({ post }: BlogPostClientProps) {
               clipRule="evenodd"
             />
           </svg>
-          GitHub에서 댓글 작성하기
+          🚀 GitHub에서 댓글 작성하기
         </a>
       </div>
 

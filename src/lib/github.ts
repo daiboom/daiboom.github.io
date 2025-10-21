@@ -42,8 +42,9 @@ export async function getCommentsForPost(
   try {
     console.log('🔍 [GitHub API] Fetching issues for post:', postTitle)
 
-    // GitHub Personal Access Token (서버 사이드에서만 사용)
-    const token = process.env.GITHUB_TOKEN
+    // GitHub Personal Access Token (클라이언트 사이드에서 사용)
+    // GitHub Pages는 정적 사이트이므로 클라이언트에서 직접 API 호출
+    const token = process.env.NEXT_PUBLIC_GITHUB_TOKEN
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github.v3+json',
       'User-Agent': 'daiboom-blog',

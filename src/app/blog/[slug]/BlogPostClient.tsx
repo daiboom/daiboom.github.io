@@ -23,13 +23,8 @@ export default function BlogPostClient({ post }: BlogPostClientProps) {
     try {
       console.log('🚀 [Blog] Loading comments for post:', post.title)
 
-      // API Route를 통해 서버 사이드에서 댓글 가져오기
-      const response = await fetch(`/api/comments?postTitle=${encodeURIComponent(post.title)}`)
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      const data = await response.json()
-      const githubComments = data.comments
+      // GitHub Issues API에서 직접 댓글 가져오기 (클라이언트 사이드)
+      const githubComments = await getCommentsForPost(post.title)
       console.log(
         '💬 [Blog] GitHub comments received:',
         githubComments.length,

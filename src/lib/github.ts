@@ -42,18 +42,31 @@ export async function getCommentsForPost(
   try {
     console.log('Fetching issues for post:', postTitle)
 
+    // GitHub Personal Access Token (환경변수에서 가져오기)
+    const token = process.env.NEXT_PUBLIC_GITHUB_TOKEN
+    const headers: Record<string, string> = {
+      Accept: 'application/vnd.github.v3+json',
+      'User-Agent': 'daiboom-blog',
+    }
+    
+    // 토큰이 있으면 인증 헤더 추가
+    if (token) {
+      headers.Authorization = `token ${token}`
+    }
+
     // 1. 해당 포스트와 관련된 Issue 찾기
     const issuesResponse = await fetch(
       `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues?state=all&per_page=100`,
       {
-        headers: {
-          Accept: 'application/vnd.github.v3+json',
-          'User-Agent': 'daiboom-blog',
-        },
+        headers,
       }
     )
 
     if (!issuesResponse.ok) {
+      if (issuesResponse.status === 403) {
+        console.error('GitHub API rate limit exceeded. Please try again later.')
+        return []
+      }
       console.error(
         'GitHub API error:',
         issuesResponse.status,
@@ -95,13 +108,14 @@ export async function getCommentsForPost(
 
         // 3. Issue의 댓글들 가져오기
         const commentsResponse = await fetch(matchingIssue.comments_url, {
-          headers: {
-            Accept: 'application/vnd.github.v3+json',
-            'User-Agent': 'daiboom-blog',
-          },
+          headers,
         })
 
         if (!commentsResponse.ok) {
+          if (commentsResponse.status === 403) {
+            console.error('GitHub API rate limit exceeded. Please try again later.')
+            return []
+          }
           console.error(
             'GitHub Comments API error:',
             commentsResponse.status,
@@ -110,37 +124,40 @@ export async function getCommentsForPost(
           return []
         }
 
-        const comments: GitHubComment[] = await commentsResponse.json()
-        console.log('Found comments:', comments.length)
+    const comments: GitHubComment[] = await commentsResponse.json()
+    console.log('Found comments:', comments.length)
 
-        // 4. Issue 본문도 댓글로 포함 (실제 댓글이 없을 때)
-        const allComments: GitHubComment[] = []
-        
-        // Issue 본문이 있고 "댓글을 작성해주세요:" 이후에 내용이 있으면 댓글로 추가
-        if (matchingIssue.body && matchingIssue.body.includes('댓글을 작성해주세요:')) {
-          const bodyParts = matchingIssue.body.split('댓글을 작성해주세요:')
-          if (bodyParts.length > 1 && bodyParts[1].trim()) {
-            allComments.push({
-              id: matchingIssue.id,
-              body: bodyParts[1].trim(),
-              user: matchingIssue.user,
-              created_at: matchingIssue.created_at,
-              updated_at: matchingIssue.updated_at,
-            })
-          }
-        }
-        
-        // 실제 댓글들 추가
-        allComments.push(...comments)
+    // 4. Issue 본문도 댓글로 포함 (실제 댓글이 없을 때)
+    const allComments: GitHubComment[] = []
 
-        // 5. GitHub 댓글을 블로그 댓글 형식으로 변환
-        return allComments.map((comment) => ({
-          id: comment.id,
-          body: comment.body,
-          user: comment.user,
-          created_at: comment.created_at,
-          updated_at: comment.updated_at,
-        }))
+    // Issue 본문이 있고 "댓글을 작성해주세요:" 이후에 내용이 있으면 댓글로 추가
+    if (
+      matchingIssue.body &&
+      matchingIssue.body.includes('댓글을 작성해주세요:')
+    ) {
+      const bodyParts = matchingIssue.body.split('댓글을 작성해주세요:')
+      if (bodyParts.length > 1 && bodyParts[1].trim()) {
+        allComments.push({
+          id: matchingIssue.id,
+          body: bodyParts[1].trim(),
+          user: matchingIssue.user,
+          created_at: matchingIssue.created_at,
+          updated_at: matchingIssue.updated_at,
+        })
+      }
+    }
+
+    // 실제 댓글들 추가
+    allComments.push(...comments)
+
+    // 5. GitHub 댓글을 블로그 댓글 형식으로 변환
+    return allComments.map((comment) => ({
+      id: comment.id,
+      body: comment.body,
+      user: comment.user,
+      created_at: comment.created_at,
+      updated_at: comment.updated_at,
+    }))
   } catch (error) {
     console.error('Error fetching comments:', error)
     return []

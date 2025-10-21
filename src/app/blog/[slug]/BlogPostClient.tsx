@@ -46,26 +46,31 @@ export default function BlogPostClient({ post }: BlogPostClientProps) {
       } else {
         setComments(githubComments)
       }
-    } catch (error) {
-      console.error('Failed to load comments:', error)
-      // 에러 발생 시 샘플 데이터 사용
-      const sampleComments: BlogComment[] = [
-        {
-          id: 1,
-          body: `댓글을 불러오는 중 오류가 발생했습니다. (${post.title}) 잠시 후 다시 시도해주세요.`,
-          user: {
-            login: 'system',
-            avatar_url: 'https://github.com/github.png',
-            html_url: 'https://github.com',
-          },
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ]
-      setComments(sampleComments)
-    } finally {
-      setLoading(false)
-    }
+        } catch (error) {
+          console.error('Failed to load comments:', error)
+          // Rate limit 에러인지 확인
+          const isRateLimitError = error instanceof Error && 
+            error.message.includes('rate limit')
+          
+          const sampleComments: BlogComment[] = [
+            {
+              id: 1,
+              body: isRateLimitError 
+                ? `🚨 **GitHub API Rate Limit 초과**\n\nGitHub API 호출 한도가 초과되었습니다. 잠시 후(약 1시간) 다시 시도해주세요.\n\n💡 **해결 방법:**\n- 1시간 후 다시 시도\n- GitHub Personal Access Token 사용 (시간당 5,000회)\n- 댓글은 GitHub Issues에서 직접 확인 가능`
+                : `댓글을 불러오는 중 오류가 발생했습니다. (${post.title}) 잠시 후 다시 시도해주세요.`,
+              user: {
+                login: 'system',
+                avatar_url: 'https://github.com/github.png',
+                html_url: 'https://github.com',
+              },
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+          ]
+          setComments(sampleComments)
+        } finally {
+          setLoading(false)
+        }
   }
 
   return (

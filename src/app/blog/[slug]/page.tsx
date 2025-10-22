@@ -1,4 +1,4 @@
-import { samplePosts } from '@/lib/blog'
+import { getPosts } from '@/lib/blog'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
@@ -8,7 +8,8 @@ import BlogPostClient from './BlogPostClient'
 
 // 정적 생성용 함수
 export async function generateStaticParams() {
-  return samplePosts.map((post) => ({
+  const posts = getPosts()
+  return posts.map((post) => ({
     slug: post.slug,
   }))
 }
@@ -20,7 +21,8 @@ interface BlogPostPageProps {
 }
 
 export default function BlogPostPage({ params }: BlogPostPageProps) {
-  const post = samplePosts.find((p) => p.slug === params.slug)
+  const posts = getPosts()
+  const post = posts.find((p) => p.slug === params.slug)
 
   if (!post) {
     return (
@@ -168,7 +170,7 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
                   관련 포스트
                 </h4>
                 <div className="space-y-3">
-                  {samplePosts
+                  {posts
                     .filter(
                       (p) => p.id !== post.id && p.category === post.category
                     )

@@ -2,7 +2,7 @@
 
 import { BlogPost } from '@/lib/blog'
 import { HybridBlogStorage } from '@/lib/hybrid-blog'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
@@ -13,7 +13,6 @@ export default function AdminBlogPage() {
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null)
   const [isCreating, setIsCreating] = useState(false)
-  const searchParams = useSearchParams()
   const [password, setPassword] = useState('')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [viewMode, setViewMode] = useState<'edit' | 'preview' | 'split'>('edit')
@@ -57,18 +56,6 @@ export default function AdminBlogPage() {
 
     verifyToken()
   }, [])
-
-  // URL 파라미터에서 편집할 포스트 자동 로드
-  useEffect(() => {
-    const editPostId = searchParams.get('edit')
-    if (editPostId && posts.length > 0) {
-      const postToEdit = posts.find((post) => post.id === editPostId)
-      if (postToEdit) {
-        setEditingPost({ ...postToEdit })
-        setIsCreating(false)
-      }
-    }
-  }, [searchParams, posts])
 
   const handleLogout = () => {
     localStorage.removeItem('admin_token')

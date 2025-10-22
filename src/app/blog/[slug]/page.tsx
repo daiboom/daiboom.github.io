@@ -1,12 +1,10 @@
 import { getPosts } from '@/lib/blog'
-import { isRepositoryOwner } from '@/lib/github-user'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
 import remarkGfm from 'remark-gfm'
 import BlogPostClient from './BlogPostClient'
-import EditButton from './EditButton'
 
 // 정적 생성용 함수
 export async function generateStaticParams() {
@@ -25,7 +23,6 @@ interface BlogPostPageProps {
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const posts = await getPosts()
   const post = posts.find((p) => p.slug === params.slug)
-  const isOwner = await isRepositoryOwner()
 
   if (!post) {
     return (
@@ -70,10 +67,9 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             )}
           </div>
 
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-4xl font-bold text-gray-900">{post.title}</h1>
-            {isOwner && <EditButton postId={post.id} />}
-          </div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            {post.title}
+          </h1>
           <p className="text-xl text-gray-600 mb-6">{post.description}</p>
 
           <div className="flex items-center justify-between text-sm text-gray-500">

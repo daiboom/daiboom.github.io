@@ -1,7 +1,6 @@
 'use client'
 
 import { BlogPost } from '@/lib/blog'
-import { uploadImageToGitHub } from '@/lib/github-images'
 import { HybridBlogStorage } from '@/lib/hybrid-blog'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -132,21 +131,23 @@ export default function AdminBlogPage() {
     setPendingImages((prev) => [...prev, file])
   }
 
-  // 실제 이미지 업로드 함수 (GitHub Contents API 사용)
+  // 실제 이미지 업로드 함수 (서버사이드 API Route 사용)
   const uploadImageFile = async (file: File): Promise<string> => {
-    // GitHub Pages에서는 환경변수에서 토큰을 가져오고, 로컬에서는 localStorage에서 가져옴
-    const token =
-      process.env.NEXT_PUBLIC_GITHUB_TOKEN ||
-      localStorage.getItem('admin_token')
-    if (!token) {
-      throw new Error(
-        'GitHub 토큰이 없습니다. PAGES_TOKEN 환경변수를 설정해주세요.'
-      )
-    }
+    const formData = new FormData()
+    formData.append('file', file)
 
-    const result = await uploadImageToGitHub(file, token)
+    const token = localStorage.getItem('admin_token')
+    const response = await fetch('/api/admin/upload', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    })
 
-    if (result.success && result.url) {
+    const result = await response.json()
+
+    if (result.success) {
       return result.url
     } else {
       throw new Error(result.error || '이미지 업로드 실패')

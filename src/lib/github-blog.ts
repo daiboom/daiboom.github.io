@@ -7,7 +7,7 @@ const POSTS_DIR = 'src/content/posts'
 
 export class GitHubBlogStorage {
   private static getAuthHeaders() {
-    const token = process.env.PAGES_TOKEN
+    const token = process.env.PAGES_TOKEN || process.env.GITHUB_TOKEN
     if (!token) {
       console.log('GitHub Token이 없습니다. API 호출이 실패할 수 있습니다.')
     }

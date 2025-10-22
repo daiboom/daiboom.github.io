@@ -1,6 +1,6 @@
 'use client'
 
-import { BlogPost, categories, getPosts, tags } from '@/lib/blog'
+import { BlogPost, categories, samplePosts, tags } from '@/lib/blog'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
@@ -10,8 +10,7 @@ export default function BlogPage() {
   const [searchQuery, setSearchQuery] = useState('')
 
   const filteredPosts = useMemo(() => {
-    const posts = getPosts()
-    return posts.filter((post) => {
+    return samplePosts.filter((post) => {
       const matchesCategory =
         selectedCategory === 'All' || post.category === selectedCategory
       const matchesTag = selectedTag === '' || post.tags.includes(selectedTag)
@@ -27,7 +26,7 @@ export default function BlogPage() {
     })
   }, [selectedCategory, selectedTag, searchQuery])
 
-  const featuredPosts = getPosts().filter((post) => post.featured)
+  const featuredPosts = samplePosts.filter((post) => post.featured)
 
   return (
     <div className="min-h-screen bg-gray-50">

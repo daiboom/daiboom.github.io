@@ -26,8 +26,6 @@ export interface BlogComment {
 }
 
 // 샘플 블로그 포스트 데이터
-import { BlogStorage } from './blog-storage'
-
 export const samplePosts: BlogPost[] = [
   {
     id: '1',
@@ -163,15 +161,3 @@ export const tags = [
   'Frontend',
   'Backend',
 ]
-
-// 실제 사용할 포스트 데이터 (스토리지에서 로드)
-export const getPosts = (): BlogPost[] => {
-  if (typeof window === 'undefined') return samplePosts
-
-  // 스토리지 초기화
-  BlogStorage.initializeWithSampleData(samplePosts)
-
-  // 스토리지에서 포스트 로드
-  const storedPosts = BlogStorage.getPosts()
-  return storedPosts.length > 0 ? storedPosts : samplePosts
-}

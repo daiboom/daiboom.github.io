@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     // GitHub Contents API로 이미지 업로드
-    const githubToken = process.env.PAGES_TOKEN
+    const githubToken = process.env.GITHUB_TOKEN
     if (!githubToken) {
       return NextResponse.json(
         { error: 'GitHub token not configured' },
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await uploadImageToGitHub(file, githubToken)
-
+    
     if (result.success && result.url) {
       return NextResponse.json({
         success: true,
@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
   } catch (error) {
     console.error('Upload error:', error)
     return NextResponse.json(

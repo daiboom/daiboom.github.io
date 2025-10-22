@@ -131,54 +131,27 @@ export default function AdminBlogPage() {
     setPendingImages((prev) => [...prev, file])
   }
 
-  // 실제 이미지 업로드 함수 (GitHub Contents API 직접 사용)
+  // 실제 이미지 업로드 함수 (서버사이드 API Route 사용)
   const uploadImageFile = async (file: File): Promise<string> => {
-    // GitHub Pages에서는 환경변수에서 토큰을 가져오고, 로컬에서는 localStorage에서 가져옴
-    const token =
-      process.env.NEXT_PUBLIC_GITHUB_TOKEN ||
-      localStorage.getItem('admin_token')
-    if (!token) {
-      throw new Error(
-        'GitHub 토큰이 없습니다. PAGES_TOKEN 환경변수를 설정해주세요.'
-      )
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const token = localStorage.getItem('admin_token')
+    const response = await fetch('/api/admin/upload', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    })
+
+    const result = await response.json()
+
+    if (result.success) {
+      return result.url
+    } else {
+      throw new Error(result.error || '이미지 업로드 실패')
     }
-
-    // GitHub Contents API로 직접 업로드
-    const arrayBuffer = await file.arrayBuffer()
-    const base64Content = Buffer.from(arrayBuffer).toString('base64')
-
-    const timestamp = Date.now()
-    const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-    const fileName = `${timestamp}_${originalName}`
-    const filePath = `public/uploads/blog/${fileName}`
-
-    const response = await fetch(
-      `https://api.github.com/repos/daiboom/daiboom.github.io/contents/${filePath}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/vnd.github.v3+json',
-        },
-        body: JSON.stringify({
-          message: `Upload image: ${fileName}`,
-          content: base64Content,
-          branch: 'main',
-        }),
-      }
-    )
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(
-        `GitHub API error: ${errorData.message || response.statusText}`
-      )
-    }
-
-    // GitHub Pages에서 접근 가능한 URL 생성
-    const imageUrl = `/uploads/blog/${fileName}`
-    return imageUrl
   }
 
   // 파일 선택 핸들러
@@ -200,17 +173,22 @@ export default function AdminBlogPage() {
 
   const handleLogin = async () => {
     try {
-      // 클라이언트사이드 인증 (GitHub Pages용)
-      if (password === getAdminPassword()) {
-        // 간단한 토큰 생성
-        const token = btoa(`admin_${Date.now()}_${Math.random()}`)
-        localStorage.setItem('admin_token', token)
+      const response = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
         setIsAuthenticated(true)
-        alert('로그인 성공!')
-        return
+        // 토큰을 로컬 스토리지에 저장 (실제로는 더 안전한 방법 사용)
+        localStorage.setItem('admin_token', data.token)
       } else {
-        alert('비밀번호가 올바르지 않습니다.')
-        return
+        alert(data.message || '비밀번호가 틀렸습니다.')
       }
     } catch (error) {
       console.error('Login error:', error)

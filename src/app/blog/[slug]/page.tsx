@@ -8,7 +8,7 @@ import BlogPostClient from './BlogPostClient'
 
 // 정적 생성용 함수
 export async function generateStaticParams() {
-  const posts = getPosts()
+  const posts = await getPosts()
   return posts.map((post) => ({
     slug: post.slug,
   }))
@@ -20,8 +20,8 @@ interface BlogPostPageProps {
   }
 }
 
-export default function BlogPostPage({ params }: BlogPostPageProps) {
-  const posts = getPosts()
+export default async function BlogPostPage({ params }: BlogPostPageProps) {
+  const posts = await getPosts()
   const post = posts.find((p) => p.slug === params.slug)
 
   if (!post) {
@@ -97,26 +97,53 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
           {/* Main Content */}
           <div className="lg:col-span-3">
             <article className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-8">
-              <div className="prose prose-lg max-w-none">
+              <div className="prose prose-lg max-w-none prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:border prose-pre:border-gray-700 prose-pre:shadow-lg prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:border prose-code:border-gray-200">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeHighlight, rehypeRaw]}
                   components={{
+                    pre({ children, ...props }) {
+                      return (
+                        <pre
+                          className="bg-gray-900 text-gray-100 p-6 rounded-lg overflow-x-auto text-sm leading-relaxed border border-gray-700 shadow-lg"
+                          {...props}
+                        >
+                          {children}
+                        </pre>
+                      )
+                    },
                     code({ node, inline, className, children, ...props }) {
                       const match = /language-(\w+)/.exec(className || '')
+
                       return !inline && match ? (
-                        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
-                          <code className={className} {...props}>
-                            {children}
-                          </code>
-                        </pre>
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
                       ) : (
                         <code
-                          className="bg-gray-100 px-1 py-0.5 rounded text-sm"
+                          className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm font-mono border border-gray-200"
                           {...props}
                         >
                           {children}
                         </code>
+                      )
+                    },
+                    img({ src, alt, ...props }) {
+                      return (
+                        <div className="my-6 text-center">
+                          <img
+                            src={src}
+                            alt={alt}
+                            className="max-w-full h-auto rounded-lg shadow-lg border border-gray-200 mx-auto"
+                            style={{ maxHeight: '600px' }}
+                            {...props}
+                          />
+                          {alt && (
+                            <p className="text-sm text-gray-600 mt-3 italic">
+                              {alt}
+                            </p>
+                          )}
+                        </div>
                       )
                     },
                   }}

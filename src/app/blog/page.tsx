@@ -2,16 +2,30 @@
 
 import { BlogPost, categories, getPosts, tags } from '@/lib/blog'
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 export default function BlogPage() {
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [selectedTag, setSelectedTag] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [allPosts, setAllPosts] = useState<BlogPost[]>([])
+
+  // 포스트 로드
+  useEffect(() => {
+    const loadPosts = async () => {
+      try {
+        const posts = await getPosts()
+        setAllPosts(posts)
+      } catch (error) {
+        console.error('Failed to load posts:', error)
+        setAllPosts([])
+      }
+    }
+    loadPosts()
+  }, [])
 
   const filteredPosts = useMemo(() => {
-    const posts = getPosts()
-    return posts.filter((post) => {
+    return allPosts.filter((post) => {
       const matchesCategory =
         selectedCategory === 'All' || post.category === selectedCategory
       const matchesTag = selectedTag === '' || post.tags.includes(selectedTag)
@@ -25,9 +39,9 @@ export default function BlogPage() {
 
       return matchesCategory && matchesTag && matchesSearch
     })
-  }, [selectedCategory, selectedTag, searchQuery])
+  }, [allPosts, selectedCategory, selectedTag, searchQuery])
 
-  const featuredPosts = getPosts().filter((post) => post.featured)
+  const featuredPosts = allPosts.filter((post) => post.featured)
 
   return (
     <div className="min-h-screen bg-gray-50">

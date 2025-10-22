@@ -12,7 +12,7 @@ export class GitHubBlogStorage {
       console.log('GitHub Token이 없습니다. API 호출이 실패할 수 있습니다.')
     }
     return {
-      Authorization: token ? `token ${token}` : '',
+      Authorization: token ? `Bearer ${token}` : '',
       Accept: 'application/vnd.github.v3+json',
       'Content-Type': 'application/json',
     }

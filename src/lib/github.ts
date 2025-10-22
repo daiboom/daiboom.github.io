@@ -44,7 +44,7 @@ export async function getCommentsForPost(
 
     // GitHub Personal Access Token (클라이언트 사이드에서 사용)
     // GitHub Pages는 정적 사이트이므로 클라이언트에서 직접 API 호출
-    const token = process.env.NEXT_PUBLIC_GITHUB_TOKEN
+    const token = process.env.PAGES_TOKEN
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github.v3+json',
       'User-Agent': 'daiboom-blog',

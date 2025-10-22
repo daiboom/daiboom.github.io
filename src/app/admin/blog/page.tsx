@@ -35,21 +35,14 @@ export default function AdminBlogPage() {
     }
     loadPosts()
 
-    // 토큰 검증
+    // 토큰 검증 (클라이언트사이드)
     const verifyToken = async () => {
       const token = localStorage.getItem('admin_token')
       if (token) {
         try {
-          const response = await fetch('/api/admin/verify', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ token }),
-          })
-
-          const data = await response.json()
-          if (data.success) {
+          // 간단한 토큰 검증 (실제로는 더 안전한 방법 필요)
+          if (token.startsWith('YWRtaW4=')) {
+            // 'admin' base64 인코딩
             setIsAuthenticated(true)
           } else {
             localStorage.removeItem('admin_token')
@@ -157,7 +150,7 @@ export default function AdminBlogPage() {
       {
         method: 'PUT',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `token ${token}`,
           'Content-Type': 'application/json',
           Accept: 'application/vnd.github.v3+json',
         },
@@ -202,8 +195,8 @@ export default function AdminBlogPage() {
     try {
       // 클라이언트사이드 인증 (GitHub Pages용)
       if (password === getAdminPassword()) {
-        // 간단한 토큰 생성
-        const token = btoa(`admin_${Date.now()}_${Math.random()}`)
+        // 간단한 토큰 생성 (base64로 'admin' 인코딩)
+        const token = btoa('admin')
         localStorage.setItem('admin_token', token)
         setIsAuthenticated(true)
         alert('로그인 성공!')

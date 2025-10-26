@@ -12,6 +12,11 @@ function WebGLGalleryContent() {
 
   const projects = [
     {
+      href: '/webgl/roulette',
+      title: '트로피컬 룰렛',
+      description: '오렌지-초록-파랑 그라디언트 컨셉의 룰렛 게임',
+    },
+    {
       href: '/webgl/phoenix',
       title: '불사조',
       description: '화려한 파티클 효과를 활용한 불사조 애니메이션',

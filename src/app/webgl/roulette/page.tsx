@@ -1,137 +1,96 @@
 'use client'
 
-import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { Bloom, EffectComposer } from '@react-three/postprocessing'
-import { useRef, useState } from 'react'
-import * as THREE from 'three'
+import {
+  ExtendedRouletteItem,
+  ROULETTE_ITEMS_DEFAULT,
+  RouletteStartBtn,
+  RouletteWheel,
+} from '@/app/webgl/roulette/components/roulette'
+import { useState } from 'react'
 
-function ArcSegments() {
-  const numberOfSegments = 10
-  const segments = []
-  const outerRadius = 2
-  const innerRadius = 1.1 // 이 값을 조절하여 안쪽 호의 크기 변경
-  const gap = 0.1
-
-  for (let i = 0; i < numberOfSegments; i++) {
-    const startAngle = (i * 2 * Math.PI) / numberOfSegments + gap / 2
-    const endAngle = ((i + 1) * 2 * Math.PI) / numberOfSegments - gap / 2
-
-    const shape = new THREE.Shape()
-    // 외부 호
-    shape.moveTo(
-      Math.cos(startAngle) * innerRadius,
-      Math.sin(startAngle) * innerRadius
-    )
-    shape.lineTo(
-      Math.cos(startAngle) * outerRadius,
-      Math.sin(startAngle) * outerRadius
-    )
-    shape.absarc(0, 0, outerRadius, startAngle, endAngle, false)
-    shape.lineTo(
-      Math.cos(endAngle) * innerRadius,
-      Math.sin(endAngle) * innerRadius
-    )
-    shape.absarc(0, 0, innerRadius, endAngle, startAngle, true)
-
-    segments.push(
-      <mesh key={i} position={[0, 0, 0]}>
-        <extrudeGeometry
-          args={[
-            shape,
-            {
-              depth: 0.5,
-              bevelEnabled: false,
-            },
-          ]}
-        />
-        <meshBasicMaterial color="white" side={THREE.DoubleSide} />
-      </mesh>
-    )
-  }
-
-  return <group rotation={[Math.PI / 2, 0, 0]}>{segments}</group>
-}
-
-function Roulette() {
-  const groupRef = useRef<THREE.Group>(null!)
+export default function RoulettePage() {
+  const [count, setCount] = useState(0)
+  const [current, setCurrent] = useState(0)
+  const [showModal, setShowModal] = useState(false)
   const [isSpinning, setIsSpinning] = useState(false)
-  const [rotationSpeed, setRotationSpeed] = useState(0)
-  const [targetRotation, setTargetRotation] = useState(0)
+  const [winningResult, setWinningResult] = useState<
+    (typeof ROULETTE_ITEMS_DEFAULT)[0] | null
+  >(null)
 
-  const spinRoulette = () => {
-    if (!isSpinning) {
-      const targetAngle = 10 * (Math.PI * 2) // 정확히 10바퀴
-      setTargetRotation(targetAngle)
-      setRotationSpeed(Math.PI * 4) // 초기 회전 속도 증가
-      setIsSpinning(true)
-    }
+  const handleSpin = () => {
+    if (isSpinning) return
+
+    setIsSpinning(true)
+    const randomIndex = Math.floor(
+      Math.random() * ROULETTE_ITEMS_DEFAULT.length
+    )
+    setCurrent(randomIndex)
+    setCount((prev) => prev + 1)
   }
 
-  useFrame((state, delta) => {
-    if (isSpinning && groupRef.current) {
-      const currentRotation = groupRef.current.rotation.y
+  const handleWheelEnd = () => {
+    const result = ROULETTE_ITEMS_DEFAULT[current]
+    setWinningResult(result)
+    setShowModal(true)
+    setIsSpinning(false)
+  }
 
-      if (currentRotation < targetRotation) {
-        // 감속 효과 강화
-        const progress = currentRotation / targetRotation
-        const deceleration = Math.max(0.95, 1 - progress) // 진행도에 따라 감속률 조정
-        const newSpeed = rotationSpeed * deceleration
-
-        groupRef.current.rotation.y += newSpeed * delta
-        setRotationSpeed(newSpeed)
-
-        if (currentRotation >= targetRotation - 0.01) {
-          setIsSpinning(false)
-          const finalAngle = currentRotation % (Math.PI * 2)
-          const segment = Math.floor((finalAngle / (Math.PI * 2)) * 8)
-          console.log('Selected segment:', segment)
-        }
-      }
-    }
-  })
+  const closeModal = () => {
+    setShowModal(false)
+    setWinningResult(null)
+  }
 
   return (
-    <group rotation={[Math.PI / 2, 0, 0]} onClick={spinRoulette}>
-      <group ref={groupRef}>
-        <mesh>
-          <cylinderGeometry args={[1, 1, 0.5, 32]} />
-          <meshStandardMaterial color="red" />
-        </mesh>
-        <ArcSegments />
-      </group>
-    </group>
-  )
-}
+    <div className="py-8">
+      <div className="max-w-2xl mx-auto px-4">
+        <h1 className="text-4xl font-bold text-center mb-8 bg-gradient-to-r from-teal-400 via-blue-500 to-green-400 bg-clip-text text-transparent">
+          🌊 트로피컬 룰렛 🌺
+        </h1>
+        <RouletteWheel<ExtendedRouletteItem>
+          items={ROULETTE_ITEMS_DEFAULT}
+          current={current}
+          count={count}
+          onWheelEnd={handleWheelEnd}
+          option={{ border: false, center: true }}
+        />
+        <RouletteStartBtn onClick={handleSpin} isDisabled={isSpinning} />
+      </div>
 
-export default function Page() {
-  return (
-    <div className="h-screen">
-      <Canvas shadows>
-        <color attach="background" args={['black']} />
-        <ambientLight intensity={0.5} />
-        <pointLight position={[10, 10, 10]} />
+      {showModal && winningResult && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-12 max-w-lg mx-4 shadow-2xl">
+            <div className="text-center mb-8">
+              <div className="text-8xl mb-6">🎉</div>
+              <h2 className="text-3xl font-bold text-gray-800 mb-3">
+                축하합니다!
+              </h2>
+              <p className="text-lg text-gray-600">당첨을 축하드립니다!</p>
+            </div>
 
-        <PerspectiveCamera makeDefault position={[0, 10, 20]} />
-        <OrbitControls />
+            <div className="text-center mb-8">
+              <div className="text-6xl mb-4">{winningResult.icon}</div>
+              <div className="text-2xl font-bold text-gray-800 mb-4">
+                {winningResult.text}
+              </div>
+              <div
+                className="inline-block px-6 py-3 rounded-full text-white font-bold text-lg"
+                style={{ backgroundColor: winningResult.color }}
+              >
+                {winningResult.text.split('*')[0]}
+              </div>
+            </div>
 
-        <Roulette />
-        {process.env.NODE_ENV === 'development' ? (
-          <>
-            <gridHelper args={[10, 10]} />
-            <axesHelper args={[8]} />
-          </>
-        ) : null}
-        <EffectComposer>
-          <Bloom
-            intensity={2.0}
-            luminanceThreshold={0.2}
-            luminanceSmoothing={0.9}
-            mipmapBlur
-            radius={0.8}
-          />
-        </EffectComposer>
-      </Canvas>
+            <div className="flex justify-center">
+              <button
+                onClick={closeModal}
+                className="px-10 py-4 bg-gradient-to-r from-orange-500 via-green-500 to-blue-500 text-white font-bold rounded-full hover:from-orange-600 hover:via-green-600 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-lg"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
